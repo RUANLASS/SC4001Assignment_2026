@@ -1,0 +1,20 @@
+# SC4001 VLM hallucination investigates
+
+This repository contains the codebase for investigating whether Vision-Language Models (VLMs) possess internal representations in their hidden states that signal when they are hallucinating object descriptions.
+
+The project investigates **Qwen2-VL-2B-Instruct** evaluated on the **POPE (Polling Object Probing Evaluation)** dataset
+
+---
+
+## Files
+vlm-hallucination-probes/
+├── data/                 # Local datasets (POPE JSON/images)
+├── notebooks/            # Exploratory data analysis & visualization
+├── results/              # Output directory for cached tensors (.pt) & probe models
+│   └── cached_features/  # Stored hidden states across layers (`features.pt`)
+├── src/                  # Python source scripts
+│   ├── download_datasets.py    # POPE dataset downloading and disk caching
+│   ├── feature_extraction.py # VLM feature extraction & hidden state caching
+│   └── setupverify.py     # Environment & GPU verification
+├── requirements.txt      # Project dependencies
+└── README.md             # Project documentation & setup instructions

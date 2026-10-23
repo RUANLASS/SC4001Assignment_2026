@@ -1,0 +1,11 @@
+torch>=2.0.0
+torchvision
+transformers>=4.40.0
+accelerate
+datasets
+scikit-learn
+pillow
+numpy
+pandas
+matplotlib
+seaborn
