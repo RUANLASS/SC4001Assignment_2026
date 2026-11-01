@@ -15,6 +15,24 @@ Other project folders, including `notebooks/`, `results/`, and `src/`, are not e
 
 ---
 
+## Getting the cache (needed for probe training)
+
+The hidden-state cache is **not in Git** (the full file is about 800 MB). Download these from the shared folder and put them in `results/cached_features/`:
+
+- `pope_full_features.pt` (about 802 MB): hidden states, shape [9000, 29, 1536], float16, last prompt token, all layers
+- `pope_metadata.parquet`: one row per question (predictions, probabilities, entropy, hallucination label, image id, split)
+- `pope_run_config.json`: model, prompt, token ids, seed, dtype
+
+**Download link:** TODO - paste the shared Google Drive folder link here.
+
+Notes:
+- Use the `split` column in the metadata (train/dev/test, assigned by image). Do not re-split, so results stay comparable across the team.
+- Load with `load_pope_cache()` and `get_split()` from `notebooks/02_pope_baseline_visuals.ipynb`.
+- Do not commit `.pt` files; they are gitignored. To regenerate, see `COLAB.md` (about 5 hours on a free T4).
+- `results/cached_features/pope_subset_features.pt` (the old 100-sample file) is superseded by the full cache.
+
+---
+
 ## File Structure
 ```text
 SC4001/

@@ -1,3 +1,7 @@
 /.venv/
 /data/*
 !/data/.gitkeep
+
+# Large cached hidden states: share via Drive/HF, never commit (see README "Getting the cache")
+/results/cached_features/*.pt
+/results/cached_features/*_shards/
