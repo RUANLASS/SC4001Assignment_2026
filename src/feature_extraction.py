@@ -1,3 +1,7 @@
+# NOT THE COLAB ENTRY POINT / LEGACY 100-SAMPLE SCRIPT.
+# The canonical way to run the model is notebooks/01_colab_pope_feature_extraction.ipynb (GPU, Colab).
+# This script saves only hidden states (no predictions, probabilities, entropy or metadata) and is kept
+# unchanged for reference; it produced results/cached_features/pope_subset_features.pt.
 import os
 import torch
 from tqdm import tqdm
