@@ -1,0 +1,55 @@
+{
+  "model_id": "Qwen/Qwen2-VL-2B-Instruct",
+  "dtype": "bfloat16",
+  "store_dtype": "float16",
+  "prompt_template": "{question} Answer yes or no.",
+  "chat_rendering_example": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|><QUESTION> Answer yes or no.<|im_end|>\n<|im_start|>assistant\n",
+  "yes_token_ids": {
+    "Yes": 9454,
+    "yes": 9693,
+    "YES": 14004
+  },
+  "no_token_ids": {
+    "No": 2753,
+    "no": 2152,
+    "NO": 8996
+  },
+  "scoring": "forced choice, logits at last prompt token, P(yes)=sum over yes ids, P(no)=sum over no ids; pred yes iff P(yes)>P(no)",
+  "token_position": "last prompt token (index -1, left padding), all hidden_states entries",
+  "dataset": {
+    "name": "lmms-lab-encoder/POPE",
+    "config": null,
+    "local_path": "data/pope",
+    "split": "test",
+    "fields": [
+      "id",
+      "question_id",
+      "question",
+      "answer",
+      "image_source",
+      "image",
+      "category"
+    ],
+    "n_rows": 9000,
+    "settings_run": [
+      "adversarial",
+      "popular",
+      "random"
+    ]
+  },
+  "subset_size": null,
+  "shuffle_order": true,
+  "seed": 0,
+  "batch_size": 1,
+  "split_rule": "md5('{seed}-{image_source}') -> train/dev/test fractions (0.7, 0.15, 0.15)",
+  "n_hidden_state_entries": 29,
+  "hidden_size": 1536,
+  "torch": "2.11.0+cu130",
+  "gpu": "Tesla T4",
+  "transformers": "4.57.6",
+  "status": "complete",
+  "started_utc": "2026-11-01T04:44:47.640000Z",
+  "n_rows_saved": 9000,
+  "finished_utc": "2026-11-01T09:33:01.732738Z",
+  "date": "2026-11-01"
+}
