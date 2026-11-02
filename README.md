@@ -3,6 +3,8 @@
 This repository contains the codebase for investigating whether Vision-Language Models (VLMs) possess internal representations in their hidden states that signal when they are hallucinating object descriptions.
 
 The project investigates **Qwen2-VL-2B-Instruct** evaluated on the **POPE (Polling Object Probing Evaluation)** dataset.
+Extra models (Qwen2.5-VL-3B, SmolVLM-500M, LLaVA-1.5-7B) and the **AMBER** benchmark (cross-dataset transfer) are covered in
+[`docs/EXTRA_MODELS_AMBER.md`](docs/EXTRA_MODELS_AMBER.md).
 
 ## Local files and Git
 
@@ -37,16 +39,30 @@ Notes:
 ```text
 SC4001/
 ├── .gitignore
-├── .venv/                # Local Python environment; excluded from Git
-├── data/                 # Local datasets; contents excluded from Git
-│   └── .gitkeep          # Keeps this directory in the repository
-├── notebooks/            # Exploratory data analysis & visualization
-├── results/              # Cached tensors (.pt) & probe models
-│   └── cached_features/  # Stored hidden states across layers
-├── src/                  # Python source scripts
-│   ├── download_datasets.py    # POPE dataset downloading and disk caching
-│   ├── feature_extraction.py   # VLM feature extraction & hidden state caching
-│   └── setupverify.py           # Environment & GPU verification
-├── requirements.txt      # Project dependencies
-└── READ.ME               
+├── .venv/                          # Local Python environment; excluded from Git
+├── data/                           # Local datasets; contents excluded from Git
+│   └── .gitkeep                    # Keeps this directory in the repository
+├── docs/
+│   └── EXTRA_MODELS_AMBER.md       # Extra models + AMBER: protocol, how to run, verification status
+├── notebooks/
+│   ├── 00_audit_existing_cache.ipynb
+│   ├── 01_colab_pope_feature_extraction.ipynb   # Qwen2-VL-2B on POPE (GPU)
+│   ├── 02_pope_baseline_visuals.ipynb           # baselines + visuals on the POPE cache (CPU)
+│   └── 03_colab_extra_models_amber.ipynb        # extra models and AMBER (GPU)
+├── results/                        # figures, tables, small outputs; *.pt caches are gitignored
+│   └── cached_features/            # Stored hidden states across layers
+├── src/
+│   ├── download_datasets.py        # POPE dataset downloading and disk caching
+│   ├── feature_extraction.py       # OLD 100-sample script (reference only)
+│   ├── setupverify.py              # Environment & GPU verification
+│   ├── evaluation_baseline.py, abstention_curves.py, train_probe_regression.py   # baselines / probes on the Qwen2-VL cache
+│   ├── vlm_registry.py             # model list, prompt, yes/no scoring
+│   ├── vlm_datasets.py             # POPE + AMBER adapters, image-level splits
+│   ├── cache_io.py                 # cache file naming / loading
+│   ├── extract_features_multi.py   # GPU extraction for any registered model, POPE or AMBER
+│   └── probe_transfer_eval.py      # CPU: layer-wise probes + POPE -> AMBER transfer
+├── tests/                          # pytest, CPU only (python -m pytest tests)
+├── requirements.txt                # Project dependencies
+├── requirements-extra.txt          # Extra dependencies for src/extract_features_multi.py (Colab) and the evaluation script
+└── README.md
 ```
