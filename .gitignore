@@ -5,3 +5,14 @@
 # Large cached hidden states: share via Drive/HF, never commit (see README "Getting the cache")
 /results/cached_features/*.pt
 /results/cached_features/*_shards/
+
+# Python / tooling caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Extra-model / AMBER downloads and resume shards (never commit)
+/data/amber_repo/
+/data/amber_images/
+/results/extra_models/*_shards/
