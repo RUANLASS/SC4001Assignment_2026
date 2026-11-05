@@ -44,12 +44,12 @@
   "split_rule": "md5('{seed}-{image_source}') -> train/dev/test fractions (0.7, 0.15, 0.15)",
   "n_hidden_state_entries": 29,
   "hidden_size": 1536,
-  "torch": "2.11.0+cu130",
-  "gpu": "Tesla T4",
+  "torch": "2.11.0+cu126",
+  "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER",
   "transformers": "4.57.6",
   "status": "complete",
-  "started_utc": "2026-11-01T04:44:47.640000Z",
+  "started_utc": "2026-11-05T08:20:43.192033Z",
   "n_rows_saved": 9000,
-  "finished_utc": "2026-11-01T09:33:01.732738Z",
-  "date": "2026-11-01"
+  "finished_utc": "2026-11-05T08:52:47.551726Z",
+  "date": "2026-11-05"
 }
