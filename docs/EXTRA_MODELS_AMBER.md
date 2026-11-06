@@ -67,24 +67,35 @@ python src/extract_features_multi.py --model smolvlm-500m --dataset pope --subse
 python src/extract_features_multi.py --model qwen2vl-2b  --dataset amber --per-subset 1000
 
 # 2) CPU: put the *_features.pt / _metadata.parquet files in results/cached_features/, then
-python src/probe_transfer_eval.py --models qwen2vl-2b smolvlm-500m qwen25vl-3b --out-dir results/extra_models
+python src/probe_transfer_eval.py --models qwen2vl-2b smolvlm-500m qwen25vl-3b --out-dir results/final/cross_model_logreg
 ```
 
-Outputs of step 2 (small; commit them): `layerwise_pope.csv`, `pope_test_summary.csv`, `transfer_amber.csv`,
-`layerwise_auroc_task{A,B}.png`, `transfer_task{A,B}.png`, `accuracy_vs_coverage.png`.
+Outputs of step 2 (small; commit them): `layerwise_pope.csv`, `pope_test_summary.csv`, `pope_test_seed_summary.csv`, `transfer_amber.csv`,
+`paired_tests.csv`, `calibration.csv`, `pope_by_setting.csv`, `aurc.csv`, `layerwise_auroc_task{A,B}.png`, `transfer_task{A,B}.png`,
+`accuracy_vs_coverage.png`, `probe_reliability_task{A,B}.png`, `command.txt`, `run_config.json`. See the README for every option.
 
 Feature files are about `N x layers x hidden x 2 bytes` (e.g. 3,000 questions x 33 layers x 960 dims is roughly 0.2 GB for
 SmolVLM-500M). **Never commit `.pt` files** (gitignored); share them through Drive.
 
-## Status of verification (update this when the runs are done)
+## Status of verification (what was actually run)
 
-* Verified on CPU: pure logic (scoring, token-id resolution, splits, AMBER parsing against the real annotation files, shard
-  resume/merge, probe + transfer evaluation on synthetic caches) - see `tests/`.
-* **Not yet verified:** loading each real model and running it (needs a GPU and Hugging Face access). That is what the smoke
-  test in notebook 03 is for. Known things to check there: the yes/no token ids printed per model, `answer_mass` close to 1,
-  and that the number of hidden-state entries matches the model's layer count.
-* No extra-model or AMBER results exist yet. Do not quote numbers in the report until `results/extra_models/` has been produced
-  from real runs.
+**CPU, real data (outputs in `results/final/`, summarised in `results/final/SUMMARY.md`, generated from the CSVs):**
+* Qwen2-VL-2B on POPE (all 9,000 questions): layer sweep, probe selection on dev (and by 5-fold image-grouped CV), baselines, paired
+  image-bootstrap tests, calibration, per-setting breakdown, AURC, PCA / class-weight ablations, MLP over 3 seeds.
+* POPE -> AMBER transfer and AMBER -> AMBER ceilings for Qwen2-VL-2B (logreg and MLP), on the 3,000 AMBER queries.
+* Cross-model comparison Qwen2-VL-2B vs SmolVLM-500M on the 3,000 shared POPE questions and 3,000 shared AMBER queries (logreg and MLP).
+* Cache integrity checks (shapes match the run configs, row ids match the metadata, `split` equals the md5 rule, no image in two splits).
+  Re-running the Qwen POPE runs after the AMBER cache was added reproduced the earlier AUROCs exactly (difference 0.0).
+
+**GPU, Colab T4 (done by teammates, per the committed `*_run_config.json`, all `status: complete`, no flags):** Qwen2-VL-2B on POPE (9,000) and AMBER (3,000);
+SmolVLM-500M on POPE (3,000) and AMBER (3,000).
+
+**Not run / not verified:**
+* Qwen2.5-VL-3B and LLaVA-1.5-7B: never run. `notebooks/04_colab_qwen25vl_3b_pope_amber.ipynb` is ready (smoke test with an automatic `answer_mass` gate,
+  then POPE and AMBER) but has not been run on a GPU. No cross-model result includes a third model.
+* The Colab extraction code itself was not run by the author of the evaluation code; only its outputs were used.
+* Unit tests cover pure logic, probe selection, leakage guards (selection never reads test labels or rows), PCA/CV/seed options, the paired bootstrap,
+  calibration metrics, AURC and the summary generator on synthetic caches; they do not load any real model.
 
 ## Contribution / AI-use notes for the report
 

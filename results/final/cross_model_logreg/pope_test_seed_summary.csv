@@ -1,0 +1,13 @@
+model,task,method,n_seeds,auroc_mean,auroc_std,per_seed_auroc,per_seed_layer
+qwen2vl-2b,A,"probe (hidden+logits, logreg)",1,0.8445054945054946,,0:0.8445,0:20
+qwen2vl-2b,A,probe (logit-only logreg),1,0.7785714285714286,,0:0.7786,0:20
+qwen2vl-2b,A,probe (logreg),1,0.8456043956043956,,0:0.8456,0:20
+qwen2vl-2b,B,"probe (hidden+logits, logreg)",1,0.8898808087632099,,0:0.8899,0:28
+qwen2vl-2b,B,probe (logit-only logreg),1,0.8103073879264585,,0:0.8103,0:28
+qwen2vl-2b,B,probe (logreg),1,0.8902185976933842,,0:0.8902,0:28
+smolvlm-500m,A,"probe (hidden+logits, logreg)",1,0.7797413793103448,,0:0.7797,0:16
+smolvlm-500m,A,probe (logit-only logreg),1,0.8073275862068965,,0:0.8073,0:16
+smolvlm-500m,A,probe (logreg),1,0.7487068965517242,,0:0.7487,0:16
+smolvlm-500m,B,"probe (hidden+logits, logreg)",1,0.8631764846743295,,0:0.8632,0:23
+smolvlm-500m,B,probe (logit-only logreg),1,0.836566091954023,,0:0.8366,0:23
+smolvlm-500m,B,probe (logreg),1,0.8619492337164751,,0:0.8619,0:23

@@ -1,0 +1,77 @@
+{
+  "models": [
+    "qwen2vl-2b",
+    "smolvlm-500m"
+  ],
+  "cache_dir": "results/cached_features",
+  "probe": "logreg",
+  "tasks": [
+    "B",
+    "A"
+  ],
+  "layer_stride": 1,
+  "n_boot": 500,
+  "restrict_common": true,
+  "bootstrap_seed": 0,
+  "probe_seeds": [
+    0
+  ],
+  "options": {
+    "class_weight": true,
+    "pca": [],
+    "cv_k": 0,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "recalibrate": false,
+    "combined": true,
+    "n_boot_paired": 1000
+  },
+  "grid": [
+    0.0001,
+    0.001,
+    0.01,
+    0.1,
+    1.0
+  ],
+  "rows_used": {
+    "qwen2vl-2b": {
+      "pope_rows": 3000,
+      "amber_rows": 3000
+    },
+    "smolvlm-500m": {
+      "pope_rows": 3000,
+      "amber_rows": 3000
+    }
+  },
+  "cache_files": {
+    "pope/qwen2vl-2b": {
+      "features": "pope_full_features.pt",
+      "features_bytes": 801866197,
+      "metadata": "pope_metadata.parquet"
+    },
+    "pope/smolvlm-500m": {
+      "features": "pope_smolvlm-500m_features.pt",
+      "features_bytes": 190106453,
+      "metadata": "pope_smolvlm-500m_metadata.parquet"
+    },
+    "amber/qwen2vl-2b": {
+      "features": "amber_qwen2vl-2b_features.pt",
+      "features_bytes": 267290445,
+      "metadata": "amber_qwen2vl-2b_metadata.parquet"
+    },
+    "amber/smolvlm-500m": {
+      "features": "amber_smolvlm-500m_features.pt",
+      "features_bytes": 190106461,
+      "metadata": "amber_smolvlm-500m_metadata.parquet"
+    }
+  },
+  "versions": {
+    "numpy": "2.4.6",
+    "pandas": "3.1.1",
+    "sklearn": "1.9.1"
+  },
+  "date": "2026-11-06"
+}

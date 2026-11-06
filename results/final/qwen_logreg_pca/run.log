@@ -1,0 +1,85 @@
+logreg probe is deterministic -> using seed 0 only (--seeds applies to the MLP probe)
+[qwen2vl-2b] no AMBER cache found -> transfer skipped for this model
+[qwen2vl-2b] task B: train 6246 (pos 722) | dev 1440 (pos 200) | test 1314 (pos 163)
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+[qwen2vl-2b] task B seed 0: best layer 21 (dev AUROC 0.907, test 0.887, param 0.01, pca 256)
+[qwen2vl-2b] task A: train 2599 (pos 99) | dev 586 (pos 33) | test 550 (pos 28)
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+/private/tmp/claude-501/-Users-lakshyasarin-Desktop-DESKTOP-SC4001Assignment-2026/bbfb0add-addf-489f-b008-9e78b25f54b5/scratchpad/venv2/lib/python3.11/site-packages/sklearn/decomposition/_pca.py:779: RuntimeWarning: invalid value encountered in divide
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+[qwen2vl-2b] task A seed 0: best layer 28 (dev AUROC 0.931, test 0.905, param 0.01, pca 256)
+
+=== POPE test (Task B = primary; probe layer + regularisation chosen on dev/CV, never on test) ===
+     model task  seed                        method  layer  auroc  ci_lo  ci_hi    n  n_pos
+qwen2vl-2b    B     0    baseline: token prob (raw)    NaN  0.801  0.736  0.858 1314    163
+qwen2vl-2b    B     0 baseline: margin (|log-odds|)    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0      baseline: binary entropy    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0       baseline: vocab entropy    NaN  0.798  0.744  0.844 1314    163
+qwen2vl-2b    B     0                probe (logreg)   21.0  0.887  0.846  0.921 1314    163
+qwen2vl-2b    B     0     probe (logit-only logreg)   21.0  0.805  0.740  0.857 1314    163
+qwen2vl-2b    B     0 probe (hidden+logits, logreg)   21.0  0.888  0.846  0.923 1314    163
+qwen2vl-2b    A     0    baseline: token prob (raw)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0 baseline: margin (|log-odds|)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0      baseline: binary entropy    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0       baseline: vocab entropy    NaN  0.803  0.735  0.874  550     28
+qwen2vl-2b    A     0                probe (logreg)   28.0  0.905  0.843  0.951  550     28
+qwen2vl-2b    A     0     probe (logit-only logreg)   28.0  0.824  0.757  0.889  550     28
+qwen2vl-2b    A     0 probe (hidden+logits, logreg)   28.0  0.906  0.843  0.950  550     28
+
+Tables and figures written to results/final/qwen_logreg_pca

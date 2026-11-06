@@ -1,0 +1,25 @@
+logreg probe is deterministic -> using seed 0 only (--seeds applies to the MLP probe)
+[qwen2vl-2b] no AMBER cache found -> transfer skipped for this model
+[qwen2vl-2b] task B: train 6246 (pos 722) | dev 1440 (pos 200) | test 1314 (pos 163)
+[qwen2vl-2b] task B seed 0: best layer 28 (dev AUROC 0.909, test 0.893, param 0.01, pca None)
+[qwen2vl-2b] task A: train 2599 (pos 99) | dev 586 (pos 33) | test 550 (pos 28)
+[qwen2vl-2b] task A seed 0: best layer 28 (dev AUROC 0.925, test 0.899, param 0.01, pca None)
+
+=== POPE test (Task B = primary; probe layer + regularisation chosen on dev/CV, never on test) ===
+     model task  seed                        method  layer  auroc  ci_lo  ci_hi    n  n_pos
+qwen2vl-2b    B     0    baseline: token prob (raw)    NaN  0.801  0.736  0.858 1314    163
+qwen2vl-2b    B     0 baseline: margin (|log-odds|)    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0      baseline: binary entropy    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0       baseline: vocab entropy    NaN  0.798  0.744  0.844 1314    163
+qwen2vl-2b    B     0                probe (logreg)   28.0  0.893  0.854  0.926 1314    163
+qwen2vl-2b    B     0     probe (logit-only logreg)   28.0  0.805  0.741  0.855 1314    163
+qwen2vl-2b    B     0 probe (hidden+logits, logreg)   28.0  0.894  0.854  0.926 1314    163
+qwen2vl-2b    A     0    baseline: token prob (raw)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0 baseline: margin (|log-odds|)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0      baseline: binary entropy    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0       baseline: vocab entropy    NaN  0.803  0.735  0.874  550     28
+qwen2vl-2b    A     0                probe (logreg)   28.0  0.899  0.831  0.945  550     28
+qwen2vl-2b    A     0     probe (logit-only logreg)   28.0  0.826  0.758  0.888  550     28
+qwen2vl-2b    A     0 probe (hidden+logits, logreg)   28.0  0.899  0.831  0.945  550     28
+
+Tables and figures written to results/final/qwen_logreg_noclassweight

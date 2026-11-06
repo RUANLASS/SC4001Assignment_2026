@@ -1,0 +1,63 @@
+{
+  "models": [
+    "qwen2vl-2b"
+  ],
+  "cache_dir": "results/cached_features",
+  "probe": "mlp",
+  "tasks": [
+    "B",
+    "A"
+  ],
+  "layer_stride": 1,
+  "n_boot": 500,
+  "restrict_common": true,
+  "bootstrap_seed": 0,
+  "probe_seeds": [
+    0,
+    1,
+    2
+  ],
+  "options": {
+    "class_weight": true,
+    "pca": [],
+    "cv_k": 0,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "recalibrate": false,
+    "combined": true,
+    "n_boot_paired": 1000
+  },
+  "grid": [
+    0.001,
+    0.01,
+    0.1,
+    1.0
+  ],
+  "rows_used": {
+    "qwen2vl-2b": {
+      "pope_rows": 9000,
+      "amber_rows": 3000
+    }
+  },
+  "cache_files": {
+    "pope/qwen2vl-2b": {
+      "features": "pope_full_features.pt",
+      "features_bytes": 801866197,
+      "metadata": "pope_metadata.parquet"
+    },
+    "amber/qwen2vl-2b": {
+      "features": "amber_qwen2vl-2b_features.pt",
+      "features_bytes": 267290445,
+      "metadata": "amber_qwen2vl-2b_metadata.parquet"
+    }
+  },
+  "versions": {
+    "numpy": "2.4.6",
+    "pandas": "3.1.1",
+    "sklearn": "1.9.1"
+  },
+  "date": "2026-11-06"
+}

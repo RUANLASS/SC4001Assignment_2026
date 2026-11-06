@@ -1,0 +1,75 @@
+logreg probe is deterministic -> using seed 0 only (--seeds applies to the MLP probe)
+[qwen2vl-2b] task B: train 6246 (pos 722) | dev 1440 (pos 200) | test 1314 (pos 163)
+[qwen2vl-2b] task B seed 0: best layer 28 (dev AUROC 0.908, test 0.892, param 0.01, pca None)
+[qwen2vl-2b] task A: train 2599 (pos 99) | dev 586 (pos 33) | test 550 (pos 28)
+[qwen2vl-2b] task A seed 0: best layer 28 (dev AUROC 0.928, test 0.906, param 0.01, pca None)
+
+=== POPE test (Task B = primary; probe layer + regularisation chosen on dev/CV, never on test) ===
+     model task  seed                        method  layer  auroc  ci_lo  ci_hi    n  n_pos
+qwen2vl-2b    B     0    baseline: token prob (raw)    NaN  0.801  0.736  0.858 1314    163
+qwen2vl-2b    B     0 baseline: margin (|log-odds|)    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0      baseline: binary entropy    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0       baseline: vocab entropy    NaN  0.798  0.744  0.844 1314    163
+qwen2vl-2b    B     0                probe (logreg)   28.0  0.892  0.851  0.925 1314    163
+qwen2vl-2b    B     0     probe (logit-only logreg)   28.0  0.805  0.740  0.857 1314    163
+qwen2vl-2b    B     0 probe (hidden+logits, logreg)   28.0  0.892  0.852  0.926 1314    163
+qwen2vl-2b    A     0    baseline: token prob (raw)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0 baseline: margin (|log-odds|)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0      baseline: binary entropy    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0       baseline: vocab entropy    NaN  0.803  0.735  0.874  550     28
+qwen2vl-2b    A     0                probe (logreg)   28.0  0.906  0.842  0.950  550     28
+qwen2vl-2b    A     0     probe (logit-only logreg)   28.0  0.824  0.757  0.889  550     28
+qwen2vl-2b    A     0 probe (hidden+logits, logreg)   28.0  0.906  0.843  0.950  550     28
+
+=== AMBER (test split rows) ===
+     model task    subset eval_set                                    method  layer  auroc  ci_lo  ci_hi   n  n_pos  seed
+qwen2vl-2b    B existence     test                baseline: token prob (raw)    NaN  0.808  0.725  0.881 160     22     0
+qwen2vl-2b    B existence     test             baseline: margin (|log-odds|)    NaN  0.808  0.724  0.881 160     22     0
+qwen2vl-2b    B existence     test                  baseline: binary entropy    NaN  0.808  0.724  0.881 160     22     0
+qwen2vl-2b    B existence     test                   baseline: vocab entropy    NaN  0.837  0.751  0.905 160     22     0
+qwen2vl-2b    B existence     test                         probe POPE->AMBER   28.0  0.453  0.333  0.571 160     22     0
+qwen2vl-2b    B existence     test     probe (logit-only logreg) POPE->AMBER   28.0  0.825  0.740  0.890 160     22     0
+qwen2vl-2b    B existence     test probe (hidden+logits, logreg) POPE->AMBER   28.0  0.454  0.331  0.575 160     22     0
+qwen2vl-2b    B existence     test                        probe AMBER->AMBER   28.0  0.856  0.764  0.946 160     22     0
+qwen2vl-2b    B attribute     test                baseline: token prob (raw)    NaN  0.811  0.684  0.915 134     16     0
+qwen2vl-2b    B attribute     test             baseline: margin (|log-odds|)    NaN  0.812  0.686  0.917 134     16     0
+qwen2vl-2b    B attribute     test                  baseline: binary entropy    NaN  0.812  0.686  0.917 134     16     0
+qwen2vl-2b    B attribute     test                   baseline: vocab entropy    NaN  0.798  0.683  0.899 134     16     0
+qwen2vl-2b    B attribute     test                         probe POPE->AMBER   28.0  0.352  0.206  0.497 134     16     0
+qwen2vl-2b    B attribute     test     probe (logit-only logreg) POPE->AMBER   28.0  0.814  0.693  0.913 134     16     0
+qwen2vl-2b    B attribute     test probe (hidden+logits, logreg) POPE->AMBER   28.0  0.358  0.216  0.502 134     16     0
+qwen2vl-2b    B attribute     test                        probe AMBER->AMBER   28.0  0.945  0.887  0.991 134     16     0
+qwen2vl-2b    B  relation     test                baseline: token prob (raw)    NaN  0.719  0.620  0.808 133     38     0
+qwen2vl-2b    B  relation     test             baseline: margin (|log-odds|)    NaN  0.718  0.618  0.807 133     38     0
+qwen2vl-2b    B  relation     test                  baseline: binary entropy    NaN  0.718  0.618  0.807 133     38     0
+qwen2vl-2b    B  relation     test                   baseline: vocab entropy    NaN  0.680  0.576  0.774 133     38     0
+qwen2vl-2b    B  relation     test                         probe POPE->AMBER   28.0  0.590  0.505  0.681 133     38     0
+qwen2vl-2b    B  relation     test     probe (logit-only logreg) POPE->AMBER   28.0  0.739  0.644  0.826 133     38     0
+qwen2vl-2b    B  relation     test probe (hidden+logits, logreg) POPE->AMBER   28.0  0.592  0.506  0.686 133     38     0
+qwen2vl-2b    B  relation     test                        probe AMBER->AMBER   28.0  0.821  0.745  0.889 133     38     0
+qwen2vl-2b    A existence     test                baseline: token prob (raw)    NaN  0.747  0.640  0.842  85     16     0
+qwen2vl-2b    A existence     test             baseline: margin (|log-odds|)    NaN  0.746  0.641  0.841  85     16     0
+qwen2vl-2b    A existence     test                  baseline: binary entropy    NaN  0.746  0.641  0.841  85     16     0
+qwen2vl-2b    A existence     test                   baseline: vocab entropy    NaN  0.819  0.721  0.895  85     16     0
+qwen2vl-2b    A existence     test                         probe POPE->AMBER   28.0  0.674  0.512  0.808  85     16     0
+qwen2vl-2b    A existence     test     probe (logit-only logreg) POPE->AMBER   28.0  0.786  0.669  0.868  85     16     0
+qwen2vl-2b    A existence     test probe (hidden+logits, logreg) POPE->AMBER   28.0  0.672  0.508  0.807  85     16     0
+qwen2vl-2b    A existence     test                        probe AMBER->AMBER   28.0  0.888  0.785  0.981  85     16     0
+qwen2vl-2b    A attribute     test                baseline: token prob (raw)    NaN  0.638  0.381  0.867  33     13     0
+qwen2vl-2b    A attribute     test             baseline: margin (|log-odds|)    NaN  0.642  0.390  0.868  33     13     0
+qwen2vl-2b    A attribute     test                  baseline: binary entropy    NaN  0.642  0.390  0.868  33     13     0
+qwen2vl-2b    A attribute     test                   baseline: vocab entropy    NaN  0.677  0.470  0.854  33     13     0
+qwen2vl-2b    A attribute     test                         probe POPE->AMBER   28.0  0.542  0.333  0.741  33     13     0
+qwen2vl-2b    A attribute     test     probe (logit-only logreg) POPE->AMBER   28.0  0.673  0.434  0.870  33     13     0
+qwen2vl-2b    A attribute     test probe (hidden+logits, logreg) POPE->AMBER   28.0  0.546  0.339  0.748  33     13     0
+qwen2vl-2b    A attribute     test                        probe AMBER->AMBER   28.0  0.919  0.772  1.000  33     13     0
+qwen2vl-2b    A  relation     test                baseline: token prob (raw)    NaN  0.637  0.429  0.855  59      7     0
+qwen2vl-2b    A  relation     test             baseline: margin (|log-odds|)    NaN  0.632  0.423  0.854  59      7     0
+qwen2vl-2b    A  relation     test                  baseline: binary entropy    NaN  0.632  0.423  0.854  59      7     0
+qwen2vl-2b    A  relation     test                   baseline: vocab entropy    NaN  0.728  0.512  0.901  59      7     0
+qwen2vl-2b    A  relation     test                         probe POPE->AMBER   28.0  0.585  0.375  0.831  59      7     0
+qwen2vl-2b    A  relation     test     probe (logit-only logreg) POPE->AMBER   28.0  0.750  0.525  0.910  59      7     0
+qwen2vl-2b    A  relation     test probe (hidden+logits, logreg) POPE->AMBER   28.0  0.585  0.375  0.831  59      7     0
+qwen2vl-2b    A  relation     test                        probe AMBER->AMBER   28.0  0.942  0.868  0.990  59      7     0
+
+Tables and figures written to results/final/qwen_logreg

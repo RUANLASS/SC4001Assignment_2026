@@ -1,0 +1,1 @@
+python src/probe_transfer_eval.py --out-dir results/final/cross_model_mlp --models qwen2vl-2b smolvlm-500m --probe mlp --seeds 0 1 2
