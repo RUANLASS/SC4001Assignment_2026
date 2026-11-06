@@ -84,6 +84,7 @@ SmolVLM-500M). **Never commit `.pt` files** (gitignored); share them through Dri
   image-bootstrap tests, calibration, per-setting breakdown, AURC, PCA / class-weight ablations, MLP over 3 seeds.
 * POPE -> AMBER transfer and AMBER -> AMBER ceilings for Qwen2-VL-2B (logreg and MLP), on the 3,000 AMBER queries.
 * Cross-model comparison Qwen2-VL-2B vs SmolVLM-500M on the 3,000 shared POPE questions and 3,000 shared AMBER queries (logreg and MLP).
+* Error-mix follow-up (`src/followup_errormix.py`, H5) for both models: error-type re-weighting, answer-conditioned probes and a sign diagnostic (`results/final/followup_errormix/`).
 * Cache integrity checks (shapes match the run configs, row ids match the metadata, `split` equals the md5 rule, no image in two splits).
   Re-running the Qwen POPE runs after the AMBER cache was added reproduced the earlier AUROCs exactly (difference 0.0).
 

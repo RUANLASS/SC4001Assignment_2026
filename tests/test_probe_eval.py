@@ -70,7 +70,7 @@ def run_eval(pope, amber=None, tasks=("A", "B"), n_boot=60, grid=None, kind="log
                              grid or pe.GRIDS[kind], 1, n_boot, 0, log=lambda *_: None, **kw)
 
 
-def write_caches(tmp_path, monkeypatch, models=(("synth", 0),), amber=True):
+def write_caches(tmp_path, monkeypatch, models=(("synth", 0),), amber=True, pope_fn=None, amber_fn=None):
     """Write synthetic caches to disk through the real writer (torch replaced by a tiny pickle-based stand-in)."""
     fake = types.ModuleType("torch")
     fake.from_numpy = _T
@@ -80,6 +80,8 @@ def write_caches(tmp_path, monkeypatch, models=(("synth", 0),), amber=True):
     for model, seed in models:
         kinds = [("pope", synth_cache(seed=seed))] + ([("amber", amber_like(seed=seed + 1))] if amber else [])
         for kind, cache in kinds:
+            fn = pope_fn if kind == "pope" else amber_fn
+            cache = fn(cache) if fn else cache                              # optional hook, e.g. to corrupt held-out labels in a test
             f, m, _ = cache_io.file_names(kind, model)
             ex.write_pt(tmp_path / f, cache["meta"].row_idx.to_numpy(), cache["features"], cache["layers"], L)
             ex.write_meta(cache["meta"], tmp_path / m)

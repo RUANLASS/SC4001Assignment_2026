@@ -1,0 +1,88 @@
+{
+  "model": "qwen2vl-2b",
+  "seed": 0,
+  "n_boot": 500,
+  "n_boot_paired": 1000,
+  "prediction": "If H5 is right, removing the answer-direction shortcut should lift AMBER existence and attribute Task B AUROC clearly above 0.5 (95% CI entirely above 0.5), ideally close to the output baselines, at a modest cost on POPE test. If the variants still score at or below about 0.5 on those subsets, H5 is not supported.",
+  "probe": "logreg",
+  "selection": "POPE dev only (weighted dev AUROC for E1); AMBER train split used only for E1b error shares and the ceiling probe",
+  "e1b_amber_train_halluc_share": {
+    "existence": 0.5583333333333333,
+    "attribute": 0.6935483870967742,
+    "relation": 0.16666666666666666
+  },
+  "selected": {
+    "orig": {
+      "layer": 28,
+      "C": 0.01,
+      "pope_dev_auroc": 0.9078387096774194
+    },
+    "e1a": {
+      "layer": 20,
+      "C": 0.001,
+      "pope_dev_auroc": 0.8945306600874496
+    },
+    "e1b_existence": {
+      "layer": 20,
+      "C": 0.001,
+      "pope_dev_auroc": 0.8968042104939681
+    },
+    "e1b_attribute": {
+      "layer": 28,
+      "C": 0.001,
+      "pope_dev_auroc": 0.9046270079271979
+    },
+    "e1b_relation": {
+      "layer": 20,
+      "C": 0.001,
+      "pope_dev_auroc": 0.9058063979567745
+    },
+    "e2_yes": {
+      "layer": 28,
+      "C": 0.01,
+      "pope_dev_auroc": 0.9283796372403967
+    },
+    "e2_no": {
+      "layer": 28,
+      "C": 0.01,
+      "pope_dev_auroc": 0.9180765107339905
+    }
+  },
+  "reproduction_check": {
+    "AMBER existence test": {
+      "reference": "results/final/qwen_logreg/transfer_amber.csv",
+      "reference_auroc": 0.45322793148880103,
+      "this_run_auroc": 0.45322793148880103
+    },
+    "AMBER attribute test": {
+      "reference": "results/final/qwen_logreg/transfer_amber.csv",
+      "reference_auroc": 0.35169491525423724,
+      "this_run_auroc": 0.35169491525423724
+    },
+    "AMBER relation test": {
+      "reference": "results/final/qwen_logreg/transfer_amber.csv",
+      "reference_auroc": 0.5903047091412742,
+      "this_run_auroc": 0.5903047091412742
+    }
+  },
+  "rows": {
+    "pope": 9000,
+    "amber": 3000,
+    "pope_test": 1314,
+    "amber_test": {
+      "existence": 160,
+      "attribute": 134,
+      "relation": 133
+    }
+  },
+  "cache_files": {
+    "pope": {
+      "features": "pope_full_features.pt",
+      "metadata": "pope_metadata.parquet"
+    },
+    "amber": {
+      "features": "amber_qwen2vl-2b_features.pt",
+      "metadata": "amber_qwen2vl-2b_metadata.parquet"
+    }
+  }
+}

@@ -80,6 +80,18 @@ python src/make_summary.py
 The PCA / no-class-weight / CV ablation runs above were done before the AMBER cache was available, so they contain POPE results only
 (re-run them with AMBER present if you want their transfer tables).
 
+**Follow-up: is the transfer failure caused by the error mix? (hypothesis H5; CPU only, Task B)** Needs the four POPE/AMBER caches for
+the two models. The prediction is stated in the script's docstring and printed first in each `run.log`, before any result is computed:
+
+```bash
+python src/followup_errormix.py --models qwen2vl-2b smolvlm-500m --out-dir results/final/followup_errormix   # --seed 0 --n-boot 500 --n-boot-paired 1000 are the defaults
+python src/make_summary.py                                                                                  # adds the "Follow-up: error-mix test" section to results/final/SUMMARY.md
+```
+
+Per model it writes `e0_sign_diagnostic.csv`, `e1_reweight.csv` (balanced E1a and AMBER-matched E1b, the latter uses target-domain statistics),
+`e2_answer_conditioned.csv`, `followup_summary.csv`, `layerwise_e1a_e2.csv`, `followup_transfer_taskB.png`, `command.txt`, `run_config.json`, `run.log`
+to `results/final/followup_errormix/<model>/`. Layer and C are chosen on POPE dev only; AMBER dev/test labels are never used for any choice.
+
 Optional third model (GPU, Colab only, not yet run): `notebooks/04_colab_qwen25vl_3b_pope_amber.ipynb`, then add `qwen25vl-3b` to `--models`.
 Options: `--class-weight/--no-class-weight` (default on), `--pca 64 128 256`, `--seeds`, `--layer-cv K`, `--recalibrate`, `--n-boot`, `--n-boot-paired`.
 
@@ -114,6 +126,7 @@ SC4001/
 │   ├── extract_features_multi.py   # GPU extraction for any registered model, POPE or AMBER
 │   ├── probe_transfer_eval.py      # CPU: layer sweep, probes, baselines, transfer, paired tests, calibration, AURC
 │   ├── probe_stats.py              # pure statistics: paired image bootstrap, ECE/Brier, Platt, accuracy-coverage areas
+│   ├── followup_errormix.py        # CPU: error-mix follow-up (E0 sign diagnostic, E1 re-weighting, E2 answer-conditioned probes)
 │   └── old/                        # superseded legacy script (see src/old/README.md); the mock-data scripts were deleted
 ├── tests/                          # pytest, CPU only (python -m pytest tests)
 ├── requirements.txt                # Project dependencies

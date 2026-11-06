@@ -57,3 +57,48 @@ def test_summary_has_transfer_headline_error_mix_and_per_layer_sections_when_amb
     t = pd.read_csv(final / "qwen_logreg" / "transfer_amber.csv")
     r = t[(t.task == "B") & (t.eval_set == "test") & (t.subset == "attribute") & (t.method == "probe AMBER->AMBER")].iloc[0]
     assert f"{r.auroc:.3f} [{r.ci_lo:.3f}, {r.ci_hi:.3f}]" in text                   # ceiling number comes straight from the CSV
+
+
+# ---------------------------------------------------------------- follow-up (error-mix) section and verdict rule
+def _fu_df(rows):
+    cols = ["experiment", "variant", "eval_set", "auroc", "ci_lo", "ci_hi", "diff_vs_orig", "diff_vs_orig_lo", "diff_vs_orig_hi"]
+    return pd.DataFrame(rows, columns=cols)
+
+
+def _case(exp, sub, auroc, lo, hi, d, dlo, dhi):
+    return (exp, f"{exp} ({sub})", f"AMBER {sub} test", auroc, lo, hi, d, dlo, dhi)
+
+
+def test_h5_verdict_follows_the_preregistered_rule():
+    good = [_case(e, s, 0.8, 0.7, 0.9, 0.3, 0.1, 0.5) for e in ("E1a", "E2") for s in ("existence", "attribute")]
+    assert ms.h5_verdict(_fu_df(good))[0] == "SUPPORTED"
+    # improves on one subset only (significantly) -> partly; above 0.5 on only one subset is not enough for 'supported'
+    part = [_case("E1a", "existence", 0.7, 0.6, 0.8, 0.2, 0.05, 0.3), _case("E1a", "attribute", 0.45, 0.3, 0.6, 0.1, -0.05, 0.25)]
+    assert ms.h5_verdict(_fu_df(part))[0] == "PARTLY SUPPORTED"
+    # point estimate above 0.5 but CI includes 0.5 -> not 'supported'
+    wide = [_case("E1a", s, 0.62, 0.45, 0.78, 0.2, 0.1, 0.3) for s in ("existence", "attribute")]
+    assert ms.h5_verdict(_fu_df(wide))[0] == "PARTLY SUPPORTED"
+    none = [_case(e, s, 0.4, 0.3, 0.5, 0.01, -0.1, 0.1) for e in ("E1a", "E2", "E1b") for s in ("existence", "attribute")]
+    assert ms.h5_verdict(_fu_df(none))[0] == "NOT SUPPORTED"
+    # E1b uses target-domain statistics, so even a perfect E1b can never give 'supported'
+    only_e1b = [_case("E1b", s, 0.9, 0.85, 0.95, 0.5, 0.3, 0.7) for s in ("existence", "attribute")]
+    assert ms.h5_verdict(_fu_df(only_e1b))[0] == "PARTLY SUPPORTED"
+
+
+def test_summary_contains_followup_section_built_from_the_csvs(tmp_path, monkeypatch):
+    import followup_errormix as fu
+    final = _run(tmp_path, monkeypatch, amber=True)
+    fu.main(["--models", "synth", "--cache-dir", str(tmp_path), "--out-dir", str(final / "followup_errormix"), "--n-boot", "20",
+             "--n-boot-paired", "20", "--reference-dirs", str(final / "qwen_logreg")])
+    text = ms.build_summary(final, tmp_path)
+    assert "## Follow-up: error-mix test (H5)" in text and fu.PREDICTION in text and "Verdict: H5" in text
+    d = pd.read_csv(final / "followup_errormix" / "synth" / "followup_summary.csv")
+    r = d[(d.experiment == "E2") & (d.eval_set == "AMBER attribute test")].iloc[0]
+    assert f"{r.auroc:.3f} [{r.ci_lo:.3f}, {r.ci_hi:.3f}]" in text                    # exact CSV value
+    assert "E0 sign diagnostic" in text and "cost of each variant on the training domain" in text and "Per-layer AUROC (descriptive only" in text
+    assert text.index(fu.PREDICTION) < text.index("Verdict: H5")                   # prediction stated before the verdict
+
+
+def test_summary_says_followup_not_run_when_absent(tmp_path, monkeypatch):
+    final = _run(tmp_path, monkeypatch)
+    assert "## Follow-up: error-mix test (H5)\n\n_not run_" in ms.build_summary(final, tmp_path)

@@ -81,9 +81,12 @@ def unc_signals(m: pd.DataFrame) -> dict:
             "binary entropy": m["binary_entropy"].to_numpy(), "vocab entropy": m["vocab_entropy"].to_numpy()}
 
 
-def safe_auc(y, s) -> float:
+def safe_auc(y, s, sample_weight=None) -> float:
+    """AUROC (optionally with per-row weights); NaN when only one class is present."""
     y = np.asarray(y)
-    return float(roc_auc_score(y, s)) if len(y) and len(np.unique(y)) == 2 else float("nan")
+    if not (len(y) and len(np.unique(y)) == 2):
+        return float("nan")
+    return float(roc_auc_score(y, s, sample_weight=sample_weight))
 
 
 def auc_ci(y, s, groups, n_boot: int = 500, seed: int = 0) -> dict:
@@ -152,15 +155,24 @@ def make_probe(kind: str, param: float, seed: int = 0, class_weight: bool = True
     raise ValueError(kind)
 
 
-def fit_probe(Xtr, ytr, kind, param, seed=0, class_weight=True, pca=None):
-    """Scaler (+ optional PCA) + classifier, every statistic fitted on the training rows only."""
+def fit_probe(Xtr, ytr, kind, param, seed=0, class_weight=True, pca=None, sample_weight=None):
+    """Scaler (+ optional PCA) + classifier, every statistic fitted on the training rows only.
+
+    `sample_weight` (logreg only) gives explicit per-row weights, used by the error-mix follow-up. Do not combine it with
+    class_weight=True: sklearn would multiply both, so pass class_weight=False and put the class balance into the weights."""
     sc = StandardScaler().fit(Xtr)
     Z = sc.transform(Xtr)
     pc = None
     if pca:
         pc = PCA(n_components=int(min(pca, Z.shape[1], Z.shape[0] - 1)), random_state=seed).fit(Z)
         Z = pc.transform(Z)
-    clf = make_probe(kind, param, seed, class_weight).fit(Z, ytr)
+    clf = make_probe(kind, param, seed, class_weight)
+    if sample_weight is not None:
+        if kind != "logreg":
+            raise ValueError("sample_weight is only supported for the logreg probe (sklearn's MLP has no sample weights)")
+        clf.fit(Z, ytr, sample_weight=sample_weight)
+    else:
+        clf.fit(Z, ytr)
     return dict(scaler=sc, pca=pc, clf=clf, param=param, pca_k=pca)
 
 
@@ -182,10 +194,12 @@ def signal_matrix(meta: pd.DataFrame) -> np.ndarray:
                             meta["binary_entropy"].to_numpy(), meta["vocab_entropy"].to_numpy()]).astype(np.float32)
 
 
-def select_fit(X, y, groups, tr, dv, kind, configs, seed=0, class_weight=True, cv_k=0):
+def select_fit(X, y, groups, tr, dv, kind, configs, seed=0, class_weight=True, cv_k=0, weights=None):
     """Choose the best config and return its fitted probe, using train/dev rows only (test rows are never touched).
 
     cv_k == 0 : fit every config on `tr`, pick the best dev AUROC (the standard protocol); the returned probe is trained on tr.
+    weights   : optional full-length array of per-row weights (dev-split mode, logreg only): the probe is fitted with weights[tr] and
+                the selection metric is the weights[dv]-weighted dev AUROC. Use with class_weight=False (see fit_probe).
     cv_k  > 0 : image-grouped K-fold CV over tr+dev (GroupKFold on `groups`), pick the best mean CV AUROC, then REFIT on tr+dev.
                 The out-of-fold scores of the chosen config are returned in fit["oof"] = (row indices, scores).
     Returns None when the needed classes are missing. Keys added to the fit: sel_auroc (the selection metric), dev_auroc,
@@ -196,6 +210,8 @@ def select_fit(X, y, groups, tr, dv, kind, configs, seed=0, class_weight=True, c
     if len(np.unique(y[tv])) < 2:
         return None
     best = None
+    if cv_k and weights is not None:
+        raise NotImplementedError("weights are only supported with the dev-split selection (cv_k=0)")
     if cv_k:
         gk = GroupKFold(n_splits=int(min(cv_k, len(np.unique(groups[tv])))))
         folds = list(gk.split(tv, groups=groups[tv]))
@@ -221,8 +237,9 @@ def select_fit(X, y, groups, tr, dv, kind, configs, seed=0, class_weight=True, c
     if len(np.unique(y[tr])) < 2 or len(np.unique(y[dv])) < 2:
         return None
     for cfg in configs:
-        f = fit_probe(X[tr], y[tr], kind, cfg["param"], seed, class_weight, cfg["pca"])
-        a = safe_auc(y[dv], probe_scores(f, X[dv]))
+        f = fit_probe(X[tr], y[tr], kind, cfg["param"], seed, class_weight, cfg["pca"],
+                      None if weights is None else weights[tr])
+        a = safe_auc(y[dv], probe_scores(f, X[dv]), None if weights is None else weights[dv])
         if not np.isnan(a) and (best is None or a > best["sel_auroc"]):
             best = dict(f, sel_auroc=a, dev_auroc=a, cv_auroc_mean=nan, cv_auroc_std=nan, cv_folds=[])
     return best

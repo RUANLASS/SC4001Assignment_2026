@@ -1,0 +1,42 @@
+PREDICTION (stated before any result): If H5 is right, removing the answer-direction shortcut should lift AMBER existence and attribute Task B AUROC clearly above 0.5 (95% CI entirely above 0.5), ideally close to the output baselines, at a modest cost on POPE test. If the variants still score at or below about 0.5 on those subsets, H5 is not supported.
+[qwen2vl-2b] POPE rows 9000 (train 6246 / dev 1440 / test 1314, errors in test 163); AMBER rows 3000; layers 29
+[qwen2vl-2b] hallucinated-yes share of errors: POPE train (natural) 0.137; E1a uses 0.500; E1b uses (AMBER train split, target-domain statistics) existence=0.558, attribute=0.694, relation=0.167
+[qwen2vl-2b] E2 rows: answered-yes train 2599 (errors 99) dev 586 (errors 33) | answered-no train 3647 (errors 623) dev 854 (errors 167)
+[qwen2vl-2b] layer  0/28 done
+[qwen2vl-2b] layer  1/28 done
+[qwen2vl-2b] layer  2/28 done
+[qwen2vl-2b] layer  3/28 done
+[qwen2vl-2b] layer  4/28 done
+[qwen2vl-2b] layer  5/28 done
+[qwen2vl-2b] layer  6/28 done
+[qwen2vl-2b] layer  7/28 done
+[qwen2vl-2b] layer  8/28 done
+[qwen2vl-2b] layer  9/28 done
+[qwen2vl-2b] layer 10/28 done
+[qwen2vl-2b] layer 11/28 done
+[qwen2vl-2b] layer 12/28 done
+[qwen2vl-2b] layer 13/28 done
+[qwen2vl-2b] layer 14/28 done
+[qwen2vl-2b] layer 15/28 done
+[qwen2vl-2b] layer 16/28 done
+[qwen2vl-2b] layer 17/28 done
+[qwen2vl-2b] layer 18/28 done
+[qwen2vl-2b] layer 19/28 done
+[qwen2vl-2b] layer 20/28 done
+[qwen2vl-2b] layer 21/28 done
+[qwen2vl-2b] layer 22/28 done
+[qwen2vl-2b] layer 23/28 done
+[qwen2vl-2b] layer 24/28 done
+[qwen2vl-2b] layer 25/28 done
+[qwen2vl-2b] layer 26/28 done
+[qwen2vl-2b] layer 27/28 done
+[qwen2vl-2b] layer 28/28 done
+[qwen2vl-2b] selected orig: layer 28, C=0.01, POPE-dev AUROC (weighted for E1) 0.908
+[qwen2vl-2b] selected e1a: layer 20, C=0.001, POPE-dev AUROC (weighted for E1) 0.895
+[qwen2vl-2b] selected e1b_existence: layer 20, C=0.001, POPE-dev AUROC (weighted for E1) 0.897
+[qwen2vl-2b] selected e1b_attribute: layer 28, C=0.001, POPE-dev AUROC (weighted for E1) 0.905
+[qwen2vl-2b] selected e1b_relation: layer 20, C=0.001, POPE-dev AUROC (weighted for E1) 0.906
+[qwen2vl-2b] selected e2_yes: layer 28, C=0.01, POPE-dev AUROC (weighted for E1) 0.928
+[qwen2vl-2b] selected e2_no: layer 28, C=0.01, POPE-dev AUROC (weighted for E1) 0.918
+[qwen2vl-2b] original probe reproduces the main run's AMBER Task B AUROCs: max |difference| = 0.00e+00
+[qwen2vl-2b] results written to results/final/followup_errormix/qwen2vl-2b

@@ -363,6 +363,98 @@ def sec_transfer(runs: list[Path]) -> str:
     return s
 
 
+def h5_verdict(df: pd.DataFrame) -> tuple[str, list[str]]:
+    """Verdict on H5 for one model, from followup_summary.csv. The rule is fixed in advance:
+
+    * SUPPORTED: some target-free variant (E1a or E2) has, on BOTH AMBER existence and attribute (test split), a 95% CI entirely above 0.5 AND a
+      significantly positive paired difference to the original probe (CI lower bound > 0).
+    * PARTLY SUPPORTED: not the above, but some variant (E1a, E2 or E1b, which uses target-domain statistics) is significantly better than the
+      original probe (paired CI lower bound > 0) on at least one of existence / attribute.
+    * NOT SUPPORTED: otherwise.
+    """
+    why, ok_variants, improved_any = [], [], []
+    for exp in ("E1a", "E2", "E1b"):
+        flags = {}
+        for sub in ("existence", "attribute"):
+            r = df[(df.experiment == exp) & (df.eval_set == f"AMBER {sub} test")]
+            if exp == "E1b":
+                r = r[r.variant.str.contains(f"({sub})", regex=False)]
+            if r.empty:
+                continue
+            r = r.iloc[0]
+            above = bool(r["ci_lo"] > 0.5)
+            improved = bool(r["diff_vs_orig_lo"] > 0)
+            flags[sub] = (above, improved)
+            why.append(f"{exp} on AMBER {sub}: AUROC {with_ci(r)}, CI above 0.5: {above}; paired difference to original probe "
+                       f"{r['diff_vs_orig']:+.3f} [{r['diff_vs_orig_lo']:+.3f}, {r['diff_vs_orig_hi']:+.3f}], significantly positive: {improved}")
+        if exp != "E1b" and len(flags) == 2 and all(a and i for a, i in flags.values()):
+            ok_variants.append(exp)
+        if any(i for _, i in flags.values()):
+            improved_any.append(exp)
+    if ok_variants:
+        return "SUPPORTED", why
+    return ("PARTLY SUPPORTED" if improved_any else "NOT SUPPORTED"), why
+
+
+def sec_followup(final: Path) -> str:
+    """Follow-up error-mix test (src/followup_errormix.py): E0 sign diagnostic, E1a/E1b re-weighting, E2 answer-conditioned probes."""
+    root = final / "followup_errormix"
+    models = sorted(p.name for p in root.iterdir() if p.is_dir() and (p / "followup_summary.csv").exists()) if root.exists() else []
+    s = "## Follow-up: error-mix test (H5)\n\n"
+    if not models:
+        return s + "_not run_\n\n"
+    cfg0 = json.loads((root / models[0] / "run_config.json").read_text())
+    s += ("**Prediction (written before the results were computed):** " + cfg0["prediction"] + "\n\n"
+          "**Verdict rule (fixed in advance):** SUPPORTED if a target-free variant (E1a or E2) has, on both AMBER existence and attribute, a 95% CI entirely "
+          "above 0.5 and a significantly positive paired difference to the original probe; PARTLY SUPPORTED if any variant (E1b included) is "
+          "significantly better than the original probe on at least one of those two subsets; otherwise NOT SUPPORTED. E1b uses AMBER-train error "
+          "statistics (target-domain information) and can never produce 'supported'. Layer / C are selected on POPE dev only; AMBER dev/test labels "
+          "are never used for any choice.\n\n")
+    for m in models:
+        d = pd.read_csv(root / m / "followup_summary.csv")
+        e0 = pd.read_csv(root / m / "e0_sign_diagnostic.csv")
+        cfg = json.loads((root / m / "run_config.json").read_text())
+        lw = pd.read_csv(root / m / "layerwise_e1a_e2.csv")
+        verdict, why = h5_verdict(d)
+        s += f"### {m}\n\n**Verdict: H5 {verdict}.**\n\n" + "".join(f"* {w}\n" for w in why) + "\n"
+        s += ("E1b target-domain error shares (hallucinated-yes share of errors, AMBER train split): "
+              + ", ".join(f"{k} {v:.3f}" for k, v in cfg["e1b_amber_train_halluc_share"].items())
+              + ". Selected layer / C on POPE dev: " + "; ".join(f"{k}: layer {v['layer']}, C={v['C']}" for k, v in cfg["selected"].items()) + ".\n\n")
+        if cfg.get("reproduction_check"):
+            diffs = [abs(v["reference_auroc"] - v["this_run_auroc"]) for v in cfg["reproduction_check"].values()]
+            s += f"Check: the original probe here reproduces the main run's AMBER Task B AUROCs (max |difference| {max(diffs):.1e}).\n\n"
+        # E0
+        t = e0.assign(AUROC_CI=e0.apply(with_ci, axis=1))[["eval_set", "score", "rows", "AUROC_CI", "n", "n_pos"]]
+        s += "**E0 sign diagnostic** (no training; original POPE probe split by the model's answer, flipped score, trivial 'answered no' score):\n\n" + md_table(t) + "\n"
+        # main table, AMBER
+        order = ["baseline", "orig", "E1a", "E1b", "E2", "ceiling"]
+        for ev in ["AMBER existence test", "AMBER attribute test", "AMBER relation test", "POPE test"]:
+            x = d[(d.eval_set == ev) & d.experiment.isin(order)].copy()
+            x["o"] = x.experiment.map({k: i for i, k in enumerate(order)})
+            x = x.sort_values(["o", "variant"])
+            if ev != "POPE test":
+                x = x[~((x.experiment == "E1b") & ~x.variant.str.contains(ev.split()[1], regex=False))]
+            def pdiff(r, tag):
+                if pd.isna(r.get(f"diff_vs_{tag}")):
+                    return ""
+                return f"{r[f'diff_vs_{tag}']:+.3f} [{r[f'diff_vs_{tag}_lo']:+.3f}, {r[f'diff_vs_{tag}_hi']:+.3f}] p={f3(r[f'diff_vs_{tag}_p'])}"
+            tab = pd.DataFrame(dict(variant=x.variant, AUROC_CI=x.apply(with_ci, axis=1), diff_vs_best_baseline=x.apply(lambda r: pdiff(r, "baseline"), axis=1),
+                                    diff_vs_original_probe=x.apply(lambda r: pdiff(r, "orig"), axis=1), n=x.n, n_pos=x.n_pos))
+            s += (f"**Task B on {ev}**" + (" (cost of each variant on the training domain)" if ev == "POPE test" else "") + "\n\n" + md_table(tab) + "\n")
+        # E2 sub probes
+        x = d[(d.experiment == "E2 sub-probe") & (d.eval_set != "POPE test")]
+        x = pd.concat([d[(d.experiment == "E2 sub-probe") & (d.eval_set == "POPE test")], x])
+        s += "**E2 sub-probes on their own rows** (answered-yes rows: label = hallucinated yes; answered-no rows: label = missed object)\n\n"
+        s += md_table(pd.DataFrame(dict(variant=x.variant, eval_set=x.eval_set, AUROC_CI=x.apply(with_ci, axis=1), n=x.n, n_pos=x.n_pos))) + "\n"
+        # per layer (descriptive)
+        keep = lw[lw.layer.isin([8, 12, 16, 20, 24, 28])]
+        cols = ["variant", "layer", "pope_test_auroc", "amber_existence_test_auroc", "amber_attribute_test_auroc", "amber_relation_test_auroc"]
+        tb = keep[keep.variant.isin(["orig", "e1a", "e2"])][cols].round(3)
+        s += ("**Per-layer AUROC (descriptive only, not used for selection; AMBER test split, so small n)**\n\n" + md_table(tb.astype({"layer": int})) + "\n")
+        s += f"![follow-up transfer, {m}](followup_errormix/{m}/followup_transfer_taskB.png)\n\n"
+    return s
+
+
 def build_summary(final: Path, cache_dir: Path) -> str:
     runs = sorted(p for p in final.iterdir() if p.is_dir() and (p / "run_config.json").exists()) if final.exists() else []
     byname = {r.name: r for r in runs}
@@ -393,6 +485,7 @@ def build_summary(final: Path, cache_dir: Path) -> str:
         s.append(sec_headline(main, "POPE -> AMBER transfer, Qwen2-VL-2B (logreg probe)") if (main / "transfer_amber.csv").exists() else "")
         s.append(sec_layer_transfer(main))
     s.append(sec_error_mix(cache_dir))
+    s.append(sec_followup(final))
     s.append(sec_transfer(runs))
     cross = [r for r in runs if len(json.loads((r / "run_config.json").read_text())["models"]) > 1]
     s.append("## Cross-model comparison\n\n")

@@ -457,6 +457,290 @@ Task B 'error' mixes two different mistakes. The probe is trained on whichever m
 | pope_smolvlm-500m | popular | 1048 | 210 | 0.143 | 0.857 | 0.377 | 0.520 |
 | pope_smolvlm-500m | random | 983 | 166 | 0.036 | 0.964 | 0.348 | 0.505 |
 
+## Follow-up: error-mix test (H5)
+
+**Prediction (written before the results were computed):** If H5 is right, removing the answer-direction shortcut should lift AMBER existence and attribute Task B AUROC clearly above 0.5 (95% CI entirely above 0.5), ideally close to the output baselines, at a modest cost on POPE test. If the variants still score at or below about 0.5 on those subsets, H5 is not supported.
+
+**Verdict rule (fixed in advance):** SUPPORTED if a target-free variant (E1a or E2) has, on both AMBER existence and attribute, a 95% CI entirely above 0.5 and a significantly positive paired difference to the original probe; PARTLY SUPPORTED if any variant (E1b included) is significantly better than the original probe on at least one of those two subsets; otherwise NOT SUPPORTED. E1b uses AMBER-train error statistics (target-domain information) and can never produce 'supported'. Layer / C are selected on POPE dev only; AMBER dev/test labels are never used for any choice.
+
+### qwen2vl-2b
+
+**Verdict: H5 PARTLY SUPPORTED.**
+
+* E1a on AMBER existence: AUROC 0.820 [0.746, 0.887], CI above 0.5: True; paired difference to original probe +0.367 [+0.259, +0.482], significantly positive: True
+* E1a on AMBER attribute: AUROC 0.512 [0.357, 0.661], CI above 0.5: False; paired difference to original probe +0.160 [+0.063, +0.270], significantly positive: True
+* E2 on AMBER existence: AUROC 0.511 [0.404, 0.615], CI above 0.5: False; paired difference to original probe +0.058 [-0.025, +0.145], significantly positive: False
+* E2 on AMBER attribute: AUROC 0.347 [0.212, 0.485], CI above 0.5: False; paired difference to original probe -0.005 [-0.060, +0.052], significantly positive: False
+* E1b on AMBER existence: AUROC 0.827 [0.754, 0.894], CI above 0.5: True; paired difference to original probe +0.374 [+0.267, +0.490], significantly positive: True
+* E1b on AMBER attribute: AUROC 0.516 [0.338, 0.684], CI above 0.5: False; paired difference to original probe +0.165 [+0.079, +0.259], significantly positive: True
+
+E1b target-domain error shares (hallucinated-yes share of errors, AMBER train split): existence 0.558, attribute 0.694, relation 0.167. Selected layer / C on POPE dev: orig: layer 28, C=0.01; e1a: layer 20, C=0.001; e1b_existence: layer 20, C=0.001; e1b_attribute: layer 28, C=0.001; e1b_relation: layer 20, C=0.001; e2_yes: layer 28, C=0.01; e2_no: layer 28, C=0.01.
+
+Check: the original probe here reproduces the main run's AMBER Task B AUROCs (max |difference| 0.0e+00).
+
+**E0 sign diagnostic** (no training; original POPE probe split by the model's answer, flipped score, trivial 'answered no' score):
+
+| eval_set | score | rows | AUROC_CI | n | n_pos |
+|---|---|---|---|---|---|
+| POPE test | original POPE probe | all rows | 0.892 [0.851, 0.925] | 1314 | 163 |
+| POPE test | original POPE probe | answered yes | 0.861 [0.785, 0.917] | 550 | 28 |
+| POPE test | original POPE probe | answered no | 0.884 [0.830, 0.928] | 764 | 135 |
+| POPE test | 1 - original probe | all rows | 0.108 [0.075, 0.149] | 1314 | 163 |
+| POPE test | 1 - original probe | answered yes | 0.139 [0.083, 0.215] | 550 | 28 |
+| POPE test | 1 - original probe | answered no | 0.116 [0.072, 0.170] | 764 | 135 |
+| POPE test | trivial: model answered no | all rows | 0.641 [0.613, 0.668] | 1314 | 163 |
+| POPE test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 550 | 28 |
+| POPE test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 764 | 135 |
+| AMBER existence test | original POPE probe | all rows | 0.453 [0.333, 0.571] | 160 | 22 |
+| AMBER existence test | original POPE probe | answered yes | 0.668 [0.490, 0.809] | 85 | 16 |
+| AMBER existence test | original POPE probe | answered no | 0.217 [0.116, 0.352] | 75 | 6 |
+| AMBER existence test | 1 - original probe | all rows | 0.547 [0.429, 0.667] | 160 | 22 |
+| AMBER existence test | 1 - original probe | answered yes | 0.332 [0.191, 0.510] | 85 | 16 |
+| AMBER existence test | 1 - original probe | answered no | 0.783 [0.648, 0.884] | 75 | 6 |
+| AMBER existence test | trivial: model answered no | all rows | 0.386 [0.300, 0.490] | 160 | 22 |
+| AMBER existence test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 85 | 16 |
+| AMBER existence test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 75 | 6 |
+| AMBER attribute test | original POPE probe | all rows | 0.352 [0.206, 0.497] | 134 | 16 |
+| AMBER attribute test | original POPE probe | answered yes | 0.500 [0.296, 0.709] | 33 | 13 |
+| AMBER attribute test | original POPE probe | answered no | 0.473 [0.071, 0.899] | 101 | 3 |
+| AMBER attribute test | 1 - original probe | all rows | 0.649 [0.504, 0.794] | 134 | 16 |
+| AMBER attribute test | 1 - original probe | answered yes | 0.502 [0.291, 0.705] | 33 | 13 |
+| AMBER attribute test | 1 - original probe | answered no | 0.527 [0.101, 0.929] | 101 | 3 |
+| AMBER attribute test | trivial: model answered no | all rows | 0.178 [0.084, 0.294] | 134 | 16 |
+| AMBER attribute test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 33 | 13 |
+| AMBER attribute test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 101 | 3 |
+| AMBER relation test | original POPE probe | all rows | 0.590 [0.505, 0.681] | 133 | 38 |
+| AMBER relation test | original POPE probe | answered yes | 0.714 [0.490, 0.912] | 59 | 7 |
+| AMBER relation test | original POPE probe | answered no | 0.349 [0.250, 0.466] | 74 | 31 |
+| AMBER relation test | 1 - original probe | all rows | 0.410 [0.319, 0.495] | 133 | 38 |
+| AMBER relation test | 1 - original probe | answered yes | 0.286 [0.088, 0.510] | 59 | 7 |
+| AMBER relation test | 1 - original probe | answered no | 0.651 [0.534, 0.750] | 74 | 31 |
+| AMBER relation test | trivial: model answered no | all rows | 0.682 [0.613, 0.741] | 133 | 38 |
+| AMBER relation test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 59 | 7 |
+| AMBER relation test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 74 | 31 |
+
+**Task B on AMBER existence test**
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: vocab entropy | 0.837 [0.751, 0.905] |  | +0.384 [+0.240, +0.524] p=0.002 | 160 | 22 |
+| original POPE probe | 0.453 [0.333, 0.571] | -0.384 [-0.524, -0.240] p=0.002 |  | 160 | 22 |
+| E1a balanced error types | 0.820 [0.746, 0.887] | -0.017 [-0.101, +0.071] p=0.671 | +0.367 [+0.259, +0.482] p=0.002 | 160 | 22 |
+| E1b AMBER-matched (existence) [target-domain stats] | 0.827 [0.754, 0.894] | -0.011 [-0.093, +0.078] p=0.787 | +0.374 [+0.267, +0.490] p=0.002 | 160 | 22 |
+| E2 answer-conditioned (routed, Platt) | 0.511 [0.404, 0.615] | -0.326 [-0.447, -0.201] p=0.002 | +0.058 [-0.025, +0.145] p=0.160 | 160 | 22 |
+| AMBER-trained probe (ceiling) | 0.856 [0.764, 0.946] | +0.018 [-0.096, +0.140] p=0.699 | +0.403 [+0.239, +0.563] p=0.002 | 160 | 22 |
+
+**Task B on AMBER attribute test**
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: margin (|log-odds|) | 0.812 [0.686, 0.917] |  | +0.460 [+0.335, +0.586] p=0.002 | 134 | 16 |
+| original POPE probe | 0.352 [0.206, 0.497] | -0.460 [-0.586, -0.335] p=0.002 |  | 134 | 16 |
+| E1a balanced error types | 0.512 [0.357, 0.661] | -0.300 [-0.393, -0.205] p=0.002 | +0.160 [+0.063, +0.270] p=0.006 | 134 | 16 |
+| E1b AMBER-matched (attribute) [target-domain stats] | 0.516 [0.338, 0.684] | -0.296 [-0.414, -0.176] p=0.002 | +0.165 [+0.079, +0.259] p=0.002 | 134 | 16 |
+| E2 answer-conditioned (routed, Platt) | 0.347 [0.212, 0.485] | -0.465 [-0.594, -0.327] p=0.002 | -0.005 [-0.060, +0.052] p=0.903 | 134 | 16 |
+| AMBER-trained probe (ceiling) | 0.945 [0.887, 0.991] | +0.133 [+0.028, +0.274] p=0.012 | +0.594 [+0.452, +0.737] p=0.002 | 134 | 16 |
+
+**Task B on AMBER relation test**
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: token prob (raw) | 0.719 [0.620, 0.808] |  | +0.129 [-0.007, +0.259] p=0.062 | 133 | 38 |
+| original POPE probe | 0.590 [0.505, 0.681] | -0.129 [-0.259, +0.007] p=0.062 |  | 133 | 38 |
+| E1a balanced error types | 0.576 [0.492, 0.662] | -0.143 [-0.245, -0.033] p=0.006 | -0.014 [-0.097, +0.057] p=0.715 | 133 | 38 |
+| E1b AMBER-matched (relation) [target-domain stats] | 0.584 [0.494, 0.660] | -0.135 [-0.237, -0.028] p=0.012 | -0.007 [-0.087, +0.061] p=0.853 | 133 | 38 |
+| E2 answer-conditioned (routed, Platt) | 0.710 [0.635, 0.789] | -0.009 [-0.125, +0.112] p=0.903 | +0.120 [+0.051, +0.191] p=0.002 | 133 | 38 |
+| AMBER-trained probe (ceiling) | 0.821 [0.745, 0.889] | +0.102 [-0.013, +0.209] p=0.088 | +0.231 [+0.119, +0.338] p=0.002 | 133 | 38 |
+
+**Task B on POPE test** (cost of each variant on the training domain)
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: token prob (raw) | 0.801 [0.736, 0.858] |  | -0.090 [-0.146, -0.046] p=0.002 | 1314 | 163 |
+| original POPE probe | 0.892 [0.851, 0.925] | +0.090 [+0.046, +0.146] p=0.002 |  | 1314 | 163 |
+| E1a balanced error types | 0.888 [0.843, 0.923] | +0.087 [+0.046, +0.132] p=0.002 | -0.004 [-0.021, +0.010] p=0.615 | 1314 | 163 |
+| E1b AMBER-matched (attribute) [target-domain stats] | 0.872 [0.827, 0.909] | +0.071 [+0.036, +0.115] p=0.002 | -0.020 [-0.041, -0.002] p=0.032 | 1314 | 163 |
+| E1b AMBER-matched (existence) [target-domain stats] | 0.886 [0.841, 0.921] | +0.085 [+0.045, +0.131] p=0.002 | -0.006 [-0.024, +0.010] p=0.486 | 1314 | 163 |
+| E1b AMBER-matched (relation) [target-domain stats] | 0.891 [0.851, 0.925] | +0.090 [+0.047, +0.139] p=0.002 | -0.001 [-0.016, +0.014] p=0.921 | 1314 | 163 |
+| E2 answer-conditioned (routed, Platt) | 0.905 [0.868, 0.937] | +0.103 [+0.059, +0.156] p=0.002 | +0.013 [-0.003, +0.027] p=0.146 | 1314 | 163 |
+
+**E2 sub-probes on their own rows** (answered-yes rows: label = hallucinated yes; answered-no rows: label = missed object)
+
+| variant | eval_set | AUROC_CI | n | n_pos |
+|---|---|---|---|---|
+| E2 yes-probe on rows answered yes | POPE test | 0.906 [0.842, 0.950] | 550 | 28 |
+| E2 no-probe on rows answered no | POPE test | 0.889 [0.842, 0.936] | 764 | 135 |
+| E2 yes-probe on rows answered yes | AMBER existence test | 0.674 [0.512, 0.808] | 85 | 16 |
+| E2 no-probe on rows answered no | AMBER existence test | 0.386 [0.252, 0.551] | 75 | 6 |
+| E2 yes-probe on rows answered yes | AMBER attribute test | 0.542 [0.333, 0.741] | 33 | 13 |
+| E2 no-probe on rows answered no | AMBER attribute test | 0.548 [0.021, 0.979] | 101 | 3 |
+| E2 yes-probe on rows answered yes | AMBER relation test | 0.585 [0.375, 0.831] | 59 | 7 |
+| E2 no-probe on rows answered no | AMBER relation test | 0.561 [0.437, 0.680] | 74 | 31 |
+
+**Per-layer AUROC (descriptive only, not used for selection; AMBER test split, so small n)**
+
+| variant | layer | pope_test_auroc | amber_existence_test_auroc | amber_attribute_test_auroc | amber_relation_test_auroc |
+|---|---|---|---|---|---|
+| orig | 8 | 0.675 | 0.564 | 0.599 | 0.398 |
+| e1a | 8 | 0.673 | 0.594 | 0.646 | 0.42 |
+| e2 | 8 | 0.826 | 0.662 | 0.702 | 0.443 |
+| orig | 12 | 0.798 | 0.32 | 0.374 | 0.435 |
+| e1a | 12 | 0.808 | 0.366 | 0.377 | 0.408 |
+| e2 | 12 | 0.897 | 0.417 | 0.399 | 0.675 |
+| orig | 16 | 0.869 | 0.661 | 0.569 | 0.6 |
+| e1a | 16 | 0.867 | 0.657 | 0.622 | 0.582 |
+| e2 | 16 | 0.905 | 0.644 | 0.411 | 0.768 |
+| orig | 20 | 0.891 | 0.751 | 0.462 | 0.611 |
+| e1a | 20 | 0.888 | 0.82 | 0.512 | 0.576 |
+| e2 | 20 | 0.902 | 0.704 | 0.427 | 0.725 |
+| orig | 24 | 0.884 | 0.573 | 0.375 | 0.565 |
+| e1a | 24 | 0.879 | 0.663 | 0.518 | 0.584 |
+| e2 | 24 | 0.903 | 0.695 | 0.464 | 0.698 |
+| orig | 28 | 0.892 | 0.453 | 0.352 | 0.59 |
+| e1a | 28 | 0.883 | 0.555 | 0.477 | 0.614 |
+| e2 | 28 | 0.905 | 0.511 | 0.347 | 0.71 |
+
+![follow-up transfer, qwen2vl-2b](followup_errormix/qwen2vl-2b/followup_transfer_taskB.png)
+
+### smolvlm-500m
+
+**Verdict: H5 PARTLY SUPPORTED.**
+
+* E1a on AMBER existence: AUROC 0.681 [0.605, 0.748], CI above 0.5: True; paired difference to original probe +0.065 [-0.028, +0.153], significantly positive: False
+* E1a on AMBER attribute: AUROC 0.703 [0.550, 0.848], CI above 0.5: True; paired difference to original probe +0.257 [+0.154, +0.369], significantly positive: True
+* E2 on AMBER existence: AUROC 0.576 [0.458, 0.668], CI above 0.5: False; paired difference to original probe -0.041 [-0.112, +0.032], significantly positive: False
+* E2 on AMBER attribute: AUROC 0.340 [0.174, 0.495], CI above 0.5: False; paired difference to original probe -0.106 [-0.245, +0.036], significantly positive: False
+* E1b on AMBER existence: AUROC 0.663 [0.567, 0.745], CI above 0.5: True; paired difference to original probe +0.047 [-0.039, +0.134], significantly positive: False
+* E1b on AMBER attribute: AUROC 0.715 [0.562, 0.859], CI above 0.5: True; paired difference to original probe +0.269 [+0.164, +0.381], significantly positive: True
+
+E1b target-domain error shares (hallucinated-yes share of errors, AMBER train split): existence 0.330, attribute 0.529, relation 0.113. Selected layer / C on POPE dev: orig: layer 23, C=0.001; e1a: layer 32, C=0.0001; e1b_existence: layer 20, C=0.001; e1b_attribute: layer 32, C=0.0001; e1b_relation: layer 23, C=0.001; e2_yes: layer 16, C=0.01; e2_no: layer 16, C=0.001.
+
+Check: the original probe here reproduces the main run's AMBER Task B AUROCs (max |difference| 0.0e+00).
+
+**E0 sign diagnostic** (no training; original POPE probe split by the model's answer, flipped score, trivial 'answered no' score):
+
+| eval_set | score | rows | AUROC_CI | n | n_pos |
+|---|---|---|---|---|---|
+| POPE test | original POPE probe | all rows | 0.862 [0.826, 0.898] | 444 | 96 |
+| POPE test | original POPE probe | answered yes | 0.826 [0.684, 0.935] | 161 | 16 |
+| POPE test | original POPE probe | answered no | 0.854 [0.808, 0.895] | 283 | 80 |
+| POPE test | 1 - original probe | all rows | 0.138 [0.102, 0.174] | 444 | 96 |
+| POPE test | 1 - original probe | answered yes | 0.174 [0.065, 0.316] | 161 | 16 |
+| POPE test | 1 - original probe | answered no | 0.146 [0.105, 0.192] | 283 | 80 |
+| POPE test | trivial: model answered no | all rows | 0.625 [0.584, 0.663] | 444 | 96 |
+| POPE test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 161 | 16 |
+| POPE test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 283 | 80 |
+| AMBER existence test | original POPE probe | all rows | 0.616 [0.513, 0.706] | 160 | 39 |
+| AMBER existence test | original POPE probe | answered yes | 0.680 [0.560, 0.800] | 68 | 16 |
+| AMBER existence test | original POPE probe | answered no | 0.602 [0.478, 0.707] | 92 | 23 |
+| AMBER existence test | 1 - original probe | all rows | 0.384 [0.294, 0.487] | 160 | 39 |
+| AMBER existence test | 1 - original probe | answered yes | 0.320 [0.200, 0.440] | 68 | 16 |
+| AMBER existence test | 1 - original probe | answered no | 0.398 [0.293, 0.522] | 92 | 23 |
+| AMBER existence test | trivial: model answered no | all rows | 0.510 [0.421, 0.601] | 160 | 39 |
+| AMBER existence test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 68 | 16 |
+| AMBER existence test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 92 | 23 |
+| AMBER attribute test | original POPE probe | all rows | 0.446 [0.294, 0.592] | 134 | 17 |
+| AMBER attribute test | original POPE probe | answered yes | 0.620 [0.370, 0.848] | 30 | 12 |
+| AMBER attribute test | original POPE probe | answered no | 0.545 [0.238, 0.865] | 104 | 5 |
+| AMBER attribute test | 1 - original probe | all rows | 0.554 [0.408, 0.706] | 134 | 17 |
+| AMBER attribute test | 1 - original probe | answered yes | 0.380 [0.152, 0.630] | 30 | 12 |
+| AMBER attribute test | 1 - original probe | answered no | 0.455 [0.135, 0.762] | 104 | 5 |
+| AMBER attribute test | trivial: model answered no | all rows | 0.224 [0.114, 0.340] | 134 | 17 |
+| AMBER attribute test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 30 | 12 |
+| AMBER attribute test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 104 | 5 |
+| AMBER relation test | original POPE probe | all rows | 0.553 [0.465, 0.641] | 133 | 51 |
+| AMBER relation test | original POPE probe | answered yes | 0.602 [0.369, 0.794] | 50 | 9 |
+| AMBER relation test | original POPE probe | answered no | 0.348 [0.246, 0.452] | 83 | 42 |
+| AMBER relation test | 1 - original probe | all rows | 0.447 [0.359, 0.535] | 133 | 51 |
+| AMBER relation test | 1 - original probe | answered yes | 0.398 [0.206, 0.631] | 50 | 9 |
+| AMBER relation test | 1 - original probe | answered no | 0.652 [0.548, 0.754] | 83 | 42 |
+| AMBER relation test | trivial: model answered no | all rows | 0.662 [0.602, 0.722] | 133 | 51 |
+| AMBER relation test | trivial: model answered no | answered yes | 0.500 [0.500, 0.500] | 50 | 9 |
+| AMBER relation test | trivial: model answered no | answered no | 0.500 [0.500, 0.500] | 83 | 42 |
+
+**Task B on AMBER existence test**
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: margin (|log-odds|) | 0.680 [0.586, 0.769] |  | +0.064 [-0.069, +0.191] p=0.346 | 160 | 39 |
+| original POPE probe | 0.616 [0.513, 0.706] | -0.064 [-0.191, +0.069] p=0.346 |  | 160 | 39 |
+| E1a balanced error types | 0.681 [0.605, 0.748] | +0.001 [-0.076, +0.086] p=0.949 | +0.065 [-0.028, +0.153] p=0.158 | 160 | 39 |
+| E1b AMBER-matched (existence) [target-domain stats] | 0.663 [0.567, 0.745] | -0.017 [-0.145, +0.125] p=0.787 | +0.047 [-0.039, +0.134] p=0.272 | 160 | 39 |
+| E2 answer-conditioned (routed, Platt) | 0.576 [0.458, 0.668] | -0.105 [-0.248, +0.039] p=0.166 | -0.041 [-0.112, +0.032] p=0.250 | 160 | 39 |
+| AMBER-trained probe (ceiling) | 0.775 [0.688, 0.853] | +0.094 [-0.001, +0.193] p=0.054 | +0.158 [+0.059, +0.251] p=0.004 | 160 | 39 |
+
+**Task B on AMBER attribute test**
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: margin (|log-odds|) | 0.743 [0.579, 0.882] |  | +0.297 [+0.167, +0.431] p=0.002 | 134 | 17 |
+| original POPE probe | 0.446 [0.294, 0.592] | -0.297 [-0.431, -0.167] p=0.002 |  | 134 | 17 |
+| E1a balanced error types | 0.703 [0.550, 0.848] | -0.040 [-0.126, +0.043] p=0.326 | +0.257 [+0.154, +0.369] p=0.002 | 134 | 17 |
+| E1b AMBER-matched (attribute) [target-domain stats] | 0.715 [0.562, 0.859] | -0.028 [-0.110, +0.054] p=0.498 | +0.269 [+0.164, +0.381] p=0.002 | 134 | 17 |
+| E2 answer-conditioned (routed, Platt) | 0.340 [0.174, 0.495] | -0.402 [-0.569, -0.237] p=0.002 | -0.106 [-0.245, +0.036] p=0.138 | 134 | 17 |
+| AMBER-trained probe (ceiling) | 0.883 [0.821, 0.945] | +0.140 [-0.006, +0.319] p=0.064 | +0.437 [+0.272, +0.597] p=0.002 | 134 | 17 |
+
+**Task B on AMBER relation test**
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: token prob (raw) | 0.618 [0.522, 0.716] |  | +0.065 [-0.072, +0.197] p=0.360 | 133 | 51 |
+| original POPE probe | 0.553 [0.465, 0.641] | -0.065 [-0.197, +0.072] p=0.360 |  | 133 | 51 |
+| E1a balanced error types | 0.604 [0.517, 0.687] | -0.015 [-0.137, +0.110] p=0.793 | +0.051 [-0.058, +0.153] p=0.382 | 133 | 51 |
+| E1b AMBER-matched (relation) [target-domain stats] | 0.554 [0.469, 0.644] | -0.064 [-0.194, +0.071] p=0.370 | +0.001 [-0.013, +0.017] p=0.901 | 133 | 51 |
+| E2 answer-conditioned (routed, Platt) | 0.682 [0.613, 0.756] | +0.064 [-0.041, +0.175] p=0.238 | +0.129 [+0.026, +0.232] p=0.020 | 133 | 51 |
+| AMBER-trained probe (ceiling) | 0.686 [0.589, 0.783] | +0.068 [-0.059, +0.191] p=0.258 | +0.133 [+0.024, +0.244] p=0.024 | 133 | 51 |
+
+**Task B on POPE test** (cost of each variant on the training domain)
+
+| variant | AUROC_CI | diff_vs_best_baseline | diff_vs_original_probe | n | n_pos |
+|---|---|---|---|---|---|
+| baseline: vocab entropy | 0.837 [0.793, 0.875] |  | -0.025 [-0.063, +0.008] p=0.150 | 444 | 96 |
+| original POPE probe | 0.862 [0.826, 0.898] | +0.025 [-0.008, +0.063] p=0.150 |  | 444 | 96 |
+| E1a balanced error types | 0.845 [0.806, 0.880] | +0.009 [-0.016, +0.032] p=0.472 | -0.017 [-0.049, +0.015] p=0.260 | 444 | 96 |
+| E1b AMBER-matched (attribute) [target-domain stats] | 0.841 [0.800, 0.876] | +0.005 [-0.021, +0.029] p=0.703 | -0.021 [-0.053, +0.013] p=0.208 | 444 | 96 |
+| E1b AMBER-matched (existence) [target-domain stats] | 0.863 [0.830, 0.896] | +0.026 [-0.013, +0.068] p=0.156 | +0.001 [-0.027, +0.028] p=0.983 | 444 | 96 |
+| E1b AMBER-matched (relation) [target-domain stats] | 0.866 [0.830, 0.902] | +0.029 [-0.005, +0.069] p=0.100 | +0.004 [-0.001, +0.010] p=0.144 | 444 | 96 |
+| E2 answer-conditioned (routed, Platt) | 0.858 [0.817, 0.895] | +0.022 [-0.021, +0.070] p=0.314 | -0.004 [-0.035, +0.025] p=0.807 | 444 | 96 |
+
+**E2 sub-probes on their own rows** (answered-yes rows: label = hallucinated yes; answered-no rows: label = missed object)
+
+| variant | eval_set | AUROC_CI | n | n_pos |
+|---|---|---|---|---|
+| E2 yes-probe on rows answered yes | POPE test | 0.749 [0.613, 0.865] | 161 | 16 |
+| E2 no-probe on rows answered no | POPE test | 0.855 [0.802, 0.895] | 283 | 80 |
+| E2 yes-probe on rows answered yes | AMBER existence test | 0.656 [0.491, 0.815] | 68 | 16 |
+| E2 no-probe on rows answered no | AMBER existence test | 0.614 [0.486, 0.728] | 92 | 23 |
+| E2 yes-probe on rows answered yes | AMBER attribute test | 0.685 [0.430, 0.894] | 30 | 12 |
+| E2 no-probe on rows answered no | AMBER attribute test | 0.741 [0.445, 0.981] | 104 | 5 |
+| E2 yes-probe on rows answered yes | AMBER relation test | 0.528 [0.350, 0.710] | 50 | 9 |
+| E2 no-probe on rows answered no | AMBER relation test | 0.543 [0.451, 0.641] | 83 | 42 |
+
+**Per-layer AUROC (descriptive only, not used for selection; AMBER test split, so small n)**
+
+| variant | layer | pope_test_auroc | amber_existence_test_auroc | amber_attribute_test_auroc | amber_relation_test_auroc |
+|---|---|---|---|---|---|
+| orig | 8 | 0.595 | 0.657 | 0.57 | 0.582 |
+| e1a | 8 | 0.587 | 0.658 | 0.596 | 0.625 |
+| e2 | 8 | 0.693 | 0.547 | 0.25 | 0.719 |
+| orig | 12 | 0.611 | 0.564 | 0.59 | 0.61 |
+| e1a | 12 | 0.622 | 0.544 | 0.572 | 0.622 |
+| e2 | 12 | 0.748 | 0.532 | 0.257 | 0.711 |
+| orig | 16 | 0.77 | 0.643 | 0.584 | 0.582 |
+| e1a | 16 | 0.766 | 0.638 | 0.571 | 0.603 |
+| e2 | 16 | 0.858 | 0.576 | 0.34 | 0.682 |
+| orig | 20 | 0.857 | 0.65 | 0.515 | 0.593 |
+| e1a | 20 | 0.851 | 0.669 | 0.579 | 0.599 |
+| e2 | 20 | 0.893 | 0.591 | 0.438 | 0.681 |
+| orig | 24 | 0.857 | 0.609 | 0.438 | 0.536 |
+| e1a | 24 | 0.829 | 0.671 | 0.587 | 0.496 |
+| e2 | 24 | 0.887 | 0.571 | 0.437 | 0.391 |
+| orig | 28 | 0.863 | 0.609 | 0.436 | 0.59 |
+| e1a | 28 | 0.851 | 0.669 | 0.651 | 0.543 |
+| e2 | 28 | 0.896 | 0.54 | 0.456 | 0.678 |
+
+![follow-up transfer, smolvlm-500m](followup_errormix/smolvlm-500m/followup_transfer_taskB.png)
+
 ## POPE -> AMBER transfer
 
 **cross_model_logreg, Task B, AMBER test split**
