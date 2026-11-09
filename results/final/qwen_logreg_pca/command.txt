@@ -1,0 +1,1 @@
+python src/probe_transfer_eval.py --out-dir results/final/qwen_logreg_pca --models qwen2vl-2b --probe logreg --pca 64 128 256

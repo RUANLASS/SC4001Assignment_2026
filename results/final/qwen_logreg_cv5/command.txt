@@ -1,0 +1,1 @@
+python src/probe_transfer_eval.py --out-dir results/final/qwen_logreg_cv5 --models qwen2vl-2b --probe logreg --layer-cv 5 --recalibrate

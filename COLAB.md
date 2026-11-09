@@ -1,6 +1,6 @@
 # Running the POPE feature extraction on Google Colab
 
-**GPU REQUIRED - RUN IN COLAB - NOT TESTED LOCALLY.** The model run lives in `notebooks/01_colab_pope_feature_extraction.ipynb`. Do not run it on a laptop, and do not use `src/feature_extraction.py` for this (it is the old 100-sample script, kept only for reference).
+**GPU REQUIRED - RUN IN COLAB - NOT TESTED LOCALLY.** The model run lives in `notebooks/01_colab_pope_feature_extraction.ipynb`. Do not run it on a laptop, and do not use `src/old/feature_extraction.py` for this (it is the old 100-sample script, kept only for reference).
 
 ## Steps
 

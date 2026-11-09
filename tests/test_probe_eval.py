@@ -1,3 +1,4 @@
+import json
 import pickle
 import sys
 import types
@@ -64,9 +65,26 @@ def amber_like(seed=1, shift=0.7):
     return c
 
 
-def run_eval(pope, amber=None, tasks=("A", "B"), n_boot=60, grid=None):
-    return pe.evaluate_model("synth", pe.View(pope), None if amber is None else pe.View(amber), tasks, "logreg",
-                             grid or pe.GRIDS["logreg"], 1, n_boot, 0, log=lambda *_: None)
+def run_eval(pope, amber=None, tasks=("A", "B"), n_boot=60, grid=None, kind="logreg", **kw):
+    return pe.evaluate_model("synth", pe.View(pope), None if amber is None else pe.View(amber), tasks, kind,
+                             grid or pe.GRIDS[kind], 1, n_boot, 0, log=lambda *_: None, **kw)
+
+
+def write_caches(tmp_path, monkeypatch, models=(("synth", 0),), amber=True, pope_fn=None, amber_fn=None):
+    """Write synthetic caches to disk through the real writer (torch replaced by a tiny pickle-based stand-in)."""
+    fake = types.ModuleType("torch")
+    fake.from_numpy = _T
+    fake.save = lambda o, p: open(p, "wb").write(pickle.dumps(o))
+    fake.load = lambda p, **kw: pickle.load(open(p, "rb"))
+    monkeypatch.setitem(sys.modules, "torch", fake)
+    for model, seed in models:
+        kinds = [("pope", synth_cache(seed=seed))] + ([("amber", amber_like(seed=seed + 1))] if amber else [])
+        for kind, cache in kinds:
+            fn = pope_fn if kind == "pope" else amber_fn
+            cache = fn(cache) if fn else cache                              # optional hook, e.g. to corrupt held-out labels in a test
+            f, m, _ = cache_io.file_names(kind, model)
+            ex.write_pt(tmp_path / f, cache["meta"].row_idx.to_numpy(), cache["features"], cache["layers"], L)
+            ex.write_meta(cache["meta"], tmp_path / m)
 
 
 @pytest.fixture(scope="module")
@@ -142,20 +160,216 @@ def test_row_restriction_view_only_uses_kept_rows():
 
 
 def test_end_to_end_run_with_files(tmp_path, monkeypatch):
-    fake = types.ModuleType("torch")           # minimal fake torch (see test_extract_loop)
-    fake.from_numpy = _T
-    fake.save = lambda o, p: open(p, "wb").write(pickle.dumps(o))
-    fake.load = lambda p, **kw: pickle.load(open(p, "rb"))
-    monkeypatch.setitem(sys.modules, "torch", fake)
-    for model, seed in [("synth", 0), ("synth2", 5)]:
-        for kind, cache in [("pope", synth_cache(seed=seed)), ("amber", amber_like(seed=seed + 1))]:
-            f, m, _ = cache_io.file_names(kind, model)
-            ex.write_pt(tmp_path / f, cache["meta"].row_idx.to_numpy(), cache["features"], cache["layers"], L)
-            ex.write_meta(cache["meta"], tmp_path / m)
+    write_caches(tmp_path, monkeypatch, models=(("synth", 0), ("synth2", 5)))     # minimal fake torch inside (see test_extract_loop)
     out = tmp_path / "out"
-    layer_df, pope_df, amber_df = pe.run(["synth", "synth2"], tmp_path, out, "logreg", ("B",), 2, 30, True, 0, log=lambda *_: None)
+    layer_df, pope_df, amber_df = pe.run(["synth", "synth2"], tmp_path, out, "logreg", ("B",), 2, 30, True, 0, log=lambda *_: None,
+                                             opts=pe.Options(n_boot_paired=30))
     for f in ["layerwise_pope.csv", "pope_test_summary.csv", "transfer_amber.csv", "layerwise_auroc_taskB.png",
               "transfer_taskB.png", "accuracy_vs_coverage.png"]:
         assert (out / f).exists(), f
     assert set(layer_df.model) == {"synth", "synth2"}
     assert (layer_df.layer.isin([0, 2, 4, 3]) | (layer_df.layer == L - 1)).all()      # stride 2 keeps the last layer too
+
+
+# ====================================================================================================================
+# probe-training options (class weights, PCA, CV selection, seeds), leakage guards, combined probe, new tables
+# ====================================================================================================================
+def _split_rows(meta, task="B"):
+    mask, y = pe.task_arrays(meta, task)
+    return y, [pe.split_idx(meta, mask, s) for s in ("train", "dev", "test")]
+
+
+def test_class_weight_option_reaches_the_probe_and_changes_the_scores():
+    assert pe.make_probe("logreg", 0.1, class_weight=True).class_weight == "balanced"
+    assert pe.make_probe("logreg", 0.1, class_weight=False).class_weight is None
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(2000, 6))
+    y = (X[:, 0] + rng.normal(0, 1, 2000) > 1.6).astype(int)            # rare positive class (~7%)
+    s_plain = pe.probe_scores(pe.fit_probe(X, y, "logreg", 1.0, class_weight=False), X)
+    s_bal = pe.probe_scores(pe.fit_probe(X, y, "logreg", 1.0, class_weight=True), X)
+    assert s_bal.mean() > 2 * s_plain.mean()                            # balanced weights lift the positive-class probability
+    assert pe.GRIDS["logreg"] == [1e-4, 1e-3, 1e-2, 1e-1, 1.0] and pe.GRIDS["mlp"] == [1e-3, 1e-2, 1e-1, 1.0]
+
+
+def test_pca_is_fitted_on_train_rows_only_and_its_size_is_chosen_on_dev():
+    c = synth_cache()
+    y, (tr, dv, te) = _split_rows(c["meta"])
+    X = c["features"][:, PLANTED, :].astype(np.float32)
+    f = pe.select_fit(X, y, c["meta"].image_id.to_numpy(), tr, dv, "logreg", pe.make_configs([0.01, 0.1], pca=[2, 8, 16]))
+    assert f["pca_k"] in (2, 8, 16) and f["pca"].n_components_ == f["pca_k"]
+    assert f["pca"].n_samples_ == len(tr)                               # train rows only (dev/test never seen by the PCA)
+    assert np.allclose(f["pca"].mean_, 0, atol=1e-4)                    # centred on the standardised TRAIN data
+    assert pe.probe_scores(f, X[te]).shape == (len(te),)
+    assert pe.make_configs([1, 2]) == [dict(param=1, pca=None), dict(param=2, pca=None)]
+    assert len(pe.make_configs([1, 2], pca=[4, 8])) == 4
+
+
+def test_selection_never_reads_test_rows():
+    """Poisoning the test rows of X with NaN must not change the selected config or raise (selection uses train/dev only)."""
+    c = synth_cache()
+    y, (tr, dv, te) = _split_rows(c["meta"])
+    X = c["features"][:, PLANTED, :].astype(np.float32)
+    g = c["meta"].image_id.to_numpy()
+    cfgs = pe.make_configs(pe.GRIDS["logreg"])
+    clean = pe.select_fit(X, y, g, tr, dv, "logreg", cfgs)
+    Xp = X.copy()
+    Xp[te] = np.nan
+    poisoned = pe.select_fit(Xp, y, g, tr, dv, "logreg", cfgs)
+    assert poisoned["param"] == clean["param"] and poisoned["sel_auroc"] == clean["sel_auroc"]
+    cv = pe.select_fit(Xp, y, g, tr, dv, "logreg", cfgs, cv_k=3)         # CV mode only uses train+dev rows too
+    assert np.isfinite(cv["sel_auroc"])
+
+
+def test_layer_and_regularisation_choice_is_independent_of_test_labels():
+    c = synth_cache()
+    a = run_eval(c, tasks=("B",))
+    c2 = synth_cache()
+    m = c2["meta"]
+    te = (m.split == "test").to_numpy()
+    m.loc[te, "error"] = 1 - m.loc[te, "error"]                         # destroy the test labels
+    b = run_eval(c2, tasks=("B",))
+    la, lb = a[0].set_index("layer"), b[0].set_index("layer")
+    assert (la.dev_auroc == lb.dev_auroc).all() and (la.param == lb.param).all()    # selection metric unchanged
+    assert not np.allclose(la.test_auroc, lb.test_auroc)                             # only the test score reacts
+    sel = lambda r: r[1][(r[1].method == "probe (logreg)")].iloc[0].layer
+    assert sel(a) == sel(b) == PLANTED
+
+
+def test_cv_selection_uses_image_disjoint_folds_and_refits_on_train_plus_dev(monkeypatch):
+    c = synth_cache()
+    y, (tr, dv, te) = _split_rows(c["meta"])
+    g = c["meta"].image_id.to_numpy()
+    X = c["features"][:, PLANTED, :].astype(np.float32)
+    seen = []
+    real = pe.fit_probe
+
+    def spy(Xtr, ytr, *a, **k):
+        seen.append(len(ytr))
+        return real(Xtr, ytr, *a, **k)
+
+    monkeypatch.setattr(pe, "fit_probe", spy)
+    f = pe.select_fit(X, y, g, tr, dv, "logreg", pe.make_configs([0.01, 0.1]), cv_k=4)
+    tv = np.concatenate([tr, dv])
+    assert seen[-1] == len(tv)                                          # final refit uses ALL train+dev rows
+    assert len(f["cv_folds"]) == 4 and 0.5 < f["cv_auroc_mean"] <= 1 and f["cv_auroc_std"] >= 0
+    idx, oof = f["oof"]
+    assert (idx == tv).all() and not np.isnan(oof).any()                # every train+dev row got an out-of-fold score
+    from sklearn.model_selection import GroupKFold
+    for a, b in GroupKFold(4).split(tv, groups=g[tv]):                  # the folds select_fit builds never split an image
+        assert not set(g[tv][a]) & set(g[tv][b])
+
+
+def test_cv_mode_picks_the_planted_layer_and_reports_fold_std():
+    layer_df, pope_df, _, _ = run_eval(synth_cache(), tasks=("B",), opts=pe.Options(cv_k=3))
+    assert layer_df.cv_auroc_mean.notna().all() and layer_df.cv_auroc_std.notna().all() and layer_df.dev_auroc.isna().all()
+    assert layer_df.loc[layer_df.sel_auroc.idxmax(), "layer"] == PLANTED
+    sel = pope_df[pope_df.method == "probe (logreg)"].iloc[0]
+    assert sel.layer == PLANTED and sel.auroc > 0.8
+
+
+def test_combined_probe_beats_logit_only_when_the_signal_is_in_the_hidden_state_and_paired_test_agrees():
+    store = {}
+    _, pope_df, _, _ = run_eval(synth_cache(), None, tasks=("B",), store=store)
+    r = lambda m: pope_df[pope_df.method == m].iloc[0].auroc
+    hid, logit, comb = r("probe (logreg)"), r("probe (logit-only logreg)"), r("probe (hidden+logits, logreg)")
+    assert hid > logit + 0.1 and comb > logit + 0.1                     # hidden state carries the planted signal, logits do not
+    paired, calib, by_set, aurc, reliab = pe.analyse(store, 0, 40, 150)
+    row = paired[(paired.probe == "probe (logreg)") & (paired.reference == "probe (logit-only logreg)")].iloc[0]
+    assert row.reference_type == "probe" and row["diff"] > 0.1 and row.ci_lo > 0 and row.p_value < 0.05
+    base = paired[(paired.reference_type == "output baseline") & (paired.probe == "probe (logreg)")]
+    assert len(base) == 4 and (base["diff"] > 0.1).all()                # vs each of the four output baselines
+
+
+def test_logit_only_probe_wins_when_the_error_is_in_the_output_distribution():
+    """Mirror case: remove the hidden-state signal (shuffled labels in the features) but keep an informative confidence."""
+    c = synth_cache(shuffle_labels=True)                                # hidden state is uninformative
+    m = c["meta"]
+    err = (m.pred_answer != m.gt_answer).to_numpy()
+    conf = np.where(err, 0.55, 0.95)
+    pyes = np.where(m.pred_answer == "yes", conf, 1 - conf)
+    m["p_yes"], m["p_no"], m["p_yes_norm"] = pyes * 0.98, (1 - pyes) * 0.98, pyes
+    m["margin"] = np.log(pyes / (1 - pyes))
+    c["meta"] = cache_io.derive_columns(m.drop(columns=["split"]).assign(split=m.split))
+    _, pope_df, _, _ = run_eval(c, None, tasks=("B",))
+    r = lambda mm: pope_df[pope_df.method == mm].iloc[0].auroc
+    assert r("probe (logit-only logreg)") > 0.95 and r("probe (logreg)") < 0.6
+    assert r("probe (hidden+logits, logreg)") > 0.9                      # combined still finds the output signal
+
+
+def test_platt_recalibration_is_reported_and_improves_ece_of_the_balanced_probe():
+    store = {}
+    run_eval(synth_cache(), None, tasks=("B",), store=store, opts=pe.Options(recalibrate=True, combined=False))
+    d = store[("synth", 0, "B", "POPE test")]
+    assert "probe_platt" in d
+    _, calib, _, _, reliab = pe.analyse(store, 0, 10, 10)
+    g = calib.set_index("method")
+    assert g.loc["probe (hidden) + Platt", "ece"] < g.loc["probe (logreg)", "ece"]       # balanced weights bias the raw probabilities
+    assert {"model confidence (P(wrong) = 1 - conf)", "probe (logreg)"} <= set(reliab[("synth", "B")])
+
+
+def test_analyse_tables_have_expected_structure():
+    store = {}
+    run_eval(synth_cache(), amber_like(), tasks=("A", "B"), store=store)
+    paired, calib, by_set, aurc, _ = pe.analyse(store, 0, 30, 60)
+    assert {("synth", 0, t, "POPE test") for t in "AB"} <= set(store)
+    assert {f"AMBER {s} test" for s in pe.AMBER_SUBSETS if s != "existence"} <= {k[3] for k in store}      # AMBER test entries
+    assert set(paired.eval_set) >= {"POPE test", "AMBER attribute test"}
+    assert {"diff", "ci_lo", "ci_hi", "p_value", "auc_probe", "auc_baseline"} <= set(paired.columns)
+    assert set(by_set.setting) == {"overall", "random", "popular", "adversarial"}
+    assert calib.ece.between(0, 1).all() and calib.brier.between(0, 1).all()
+    b = aurc[(aurc.eval_set == "POPE test") & (aurc.method == "probe (logreg)")].iloc[0]
+    assert b.oracle_aurc <= b.aurc < b.random_aurc and b.auacc == pytest.approx(1 - b.aurc)
+
+
+def test_mlp_seeds_give_mean_and_std_and_per_seed_values(tmp_path, monkeypatch):
+    write_caches(tmp_path, monkeypatch, amber=False)
+    out = tmp_path / "mlp"
+    _, pope_df, _ = pe.run(["synth"], tmp_path, out, "mlp", ("B",), 4, 20, True, 0, log=lambda *_: None,
+                           opts=pe.Options(seeds=(0, 1, 2), n_boot_paired=20, combined=False))
+    ss = pd.read_csv(out / "pope_test_seed_summary.csv")
+    r = ss[ss.method == "probe (mlp)"].iloc[0]
+    assert r.n_seeds == 3 and r.auroc_std >= 0 and len(r.per_seed_auroc.split(";")) == 3
+    per_seed = pope_df[pope_df.method == "probe (mlp)"].auroc
+    assert r.auroc_mean == pytest.approx(per_seed.mean()) and r.auroc_std == pytest.approx(per_seed.std(ddof=1))
+    assert (pope_df.method.str.startswith("baseline")).sum() == 4                     # baselines are not repeated per seed
+
+
+def test_logreg_ignores_extra_seeds(tmp_path, monkeypatch):
+    write_caches(tmp_path, monkeypatch, amber=False)
+    msgs = []
+    pe.run(["synth"], tmp_path, tmp_path / "o", "logreg", ("B",), 4, 20, True, 0, log=msgs.append,
+           opts=pe.Options(seeds=(0, 1, 2), n_boot_paired=20, combined=False))
+    assert any("deterministic" in m for m in msgs)
+    assert len(pd.read_csv(tmp_path / "o" / "pope_test_seed_summary.csv").query("method == 'probe (logreg)'")) == 1
+
+
+def test_full_run_writes_all_tables_figures_and_run_config(tmp_path, monkeypatch):
+    write_caches(tmp_path, monkeypatch)
+    out = tmp_path / "out"
+    pe.run(["synth"], tmp_path, out, "logreg", ("B", "A"), 2, 30, True, 0, log=lambda *_: None,
+           opts=pe.Options(recalibrate=True, n_boot_paired=30, cv_k=3))
+    for f in ["layerwise_pope.csv", "pope_test_summary.csv", "pope_test_seed_summary.csv", "transfer_amber.csv", "paired_tests.csv",
+              "calibration.csv", "pope_by_setting.csv", "aurc.csv", "run_config.json", "layerwise_auroc_taskA.png",
+              "layerwise_auroc_taskB.png", "transfer_taskB.png", "accuracy_vs_coverage.png", "probe_reliability_taskA.png",
+              "probe_reliability_taskB.png"]:
+        assert (out / f).exists(), f
+    cfg = json.loads((out / "run_config.json").read_text())
+    assert cfg["options"]["cv_k"] == 3 and cfg["probe"] == "logreg" and "pope/synth" in cfg["cache_files"]
+    amb = pd.read_csv(out / "transfer_amber.csv")
+    assert {"probe POPE->AMBER", "probe (logit-only logreg) POPE->AMBER", "probe (hidden+logits, logreg) POPE->AMBER"} <= set(amb.method)
+
+
+def test_missing_cache_stops_instead_of_falling_back_to_fake_data(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        pe.run(["qwen2vl-2b"], tmp_path, tmp_path / "o", "logreg", ("B",), 1, 10, True, 0, log=lambda *_: None)
+
+
+def test_no_mock_or_random_label_code_remains_in_the_results_pipeline():
+    import re
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[1] / "src"
+    bad = re.compile(r"generate_mock|mock_features|mock_labels|Mock probe|np\.random\.(seed|uniform|randint)\(")
+    for f in src.glob("*.py"):                                           # src/old/ is excluded on purpose (legacy reference only)
+        assert not bad.search(f.read_text()), f"mock/random-label code found in {f.name}"
+    assert not (src / "train_probe_regression.py").exists() and not (src / "evaluation_baseline.py").exists()
+    assert not (src / "abstention_curves.py").exists()

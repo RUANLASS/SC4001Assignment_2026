@@ -35,34 +35,101 @@ Notes:
 
 ---
 
+## Reproducing the report results
+
+Everything below is CPU-only and reads the caches in `results/cached_features/` (see "Getting the cache"). If a required `.pt` is missing the
+scripts stop with `FileNotFoundError`; they never fall back to mock or synthetic data.
+
+```bash
+pip install -r requirements.txt -r requirements-extra.txt
+python -m pytest tests                                   # unit tests on small synthetic caches (no real data, no GPU)
+
+# --- baseline figures + table (notebook 02, runs on pope_full_features.pt + pope_metadata.parquet)
+jupyter nbconvert --to notebook --execute notebooks/02_pope_baseline_visuals.ipynb --output 02_pope_baseline_visuals.ipynb
+#   -> results/figures/*.png, results/figures/pope_baseline_results_table.csv
+
+# --- Qwen2-VL-2B probes on POPE (all 9,000 questions; every run writes command.txt, run_config.json, run.log next to its tables)
+python src/probe_transfer_eval.py --models qwen2vl-2b --probe logreg --recalibrate           --out-dir results/final/qwen_logreg
+python src/probe_transfer_eval.py --models qwen2vl-2b --probe mlp --seeds 0 1 2             --out-dir results/final/qwen_mlp
+python src/probe_transfer_eval.py --models qwen2vl-2b --probe logreg --pca 64 128 256       --out-dir results/final/qwen_logreg_pca
+python src/probe_transfer_eval.py --models qwen2vl-2b --probe logreg --no-class-weight      --out-dir results/final/qwen_logreg_noclassweight
+python src/probe_transfer_eval.py --models qwen2vl-2b --probe logreg --layer-cv 5 --recalibrate --out-dir results/final/qwen_logreg_cv5
+
+# --- summary (every number is read from the CSVs above)
+python src/make_summary.py                               # -> results/final/SUMMARY.md
+```
+
+| Output | Produced by |
+|---|---|
+| Layer-wise AUROC curves (`layerwise_auroc_task{A,B}.png`, CV band in `qwen_logreg_cv5`), `layerwise_pope.csv` | `probe_transfer_eval.py` |
+| Probe vs baselines on POPE test, with CIs (`pope_test_summary.csv`), MLP seed mean ± std (`pope_test_seed_summary.csv`) | `probe_transfer_eval.py` |
+| Paired probe-vs-baseline tests (`paired_tests.csv`) | `probe_transfer_eval.py` (`probe_stats.paired_auc_diff`) |
+| Calibration (`calibration.csv`, `probe_reliability_task{A,B}.png`) | `probe_transfer_eval.py` (`--recalibrate` adds Platt scaling) |
+| By-setting table (`pope_by_setting.csv`), AURC / AUACC (`aurc.csv`), `accuracy_vs_coverage.png` | `probe_transfer_eval.py` |
+| Hidden-only vs logit-only vs combined probe | every run (methods `probe (...)`, `probe (logit-only logreg)`, `probe (hidden+logits, ...)`) |
+
+**AMBER and cross-model runs** (need `amber_qwen2vl-2b_features.pt`, `pope_smolvlm-500m_features.pt`, `amber_smolvlm-500m_features.pt` in
+`results/cached_features/`; the Qwen runs above pick up the AMBER cache automatically and then also write `transfer_amber.csv`):
+
+```bash
+python src/probe_transfer_eval.py --models qwen2vl-2b smolvlm-500m --probe logreg --out-dir results/final/cross_model_logreg   # restricts both models to their shared 3,000 questions / 3,000 AMBER queries
+python src/probe_transfer_eval.py --models qwen2vl-2b smolvlm-500m --probe mlp --seeds 0 1 2 --out-dir results/final/cross_model_mlp
+python src/make_summary.py
+```
+
+The PCA / no-class-weight / CV ablation runs above were done before the AMBER cache was available, so they contain POPE results only
+(re-run them with AMBER present if you want their transfer tables).
+
+**Follow-up: is the transfer failure caused by the error mix? (hypothesis H5; CPU only, Task B)** Needs the four POPE/AMBER caches for
+the two models. The prediction is stated in the script's docstring and printed first in each `run.log`, before any result is computed:
+
+```bash
+python src/followup_errormix.py --models qwen2vl-2b smolvlm-500m --out-dir results/final/followup_errormix   # --seed 0 --n-boot 500 --n-boot-paired 1000 are the defaults
+python src/make_summary.py                                                                                  # adds the "Follow-up: error-mix test" section to results/final/SUMMARY.md
+```
+
+Per model it writes `e0_sign_diagnostic.csv`, `e1_reweight.csv` (balanced E1a and AMBER-matched E1b, the latter uses target-domain statistics),
+`e2_answer_conditioned.csv`, `followup_summary.csv`, `layerwise_e1a_e2.csv`, `followup_transfer_taskB.png`, `command.txt`, `run_config.json`, `run.log`
+to `results/final/followup_errormix/<model>/`. Layer and C are chosen on POPE dev only; AMBER dev/test labels are never used for any choice.
+
+Optional third model (GPU, Colab only, not yet run): `notebooks/04_colab_qwen25vl_3b_pope_amber.ipynb`, then add `qwen25vl-3b` to `--models`.
+Options: `--class-weight/--no-class-weight` (default on), `--pca 64 128 256`, `--seeds`, `--layer-cv K`, `--recalibrate`, `--n-boot`, `--n-boot-paired`.
+
+---
+
 ## File Structure
 ```text
 SC4001/
 ├── .gitignore
 ├── .venv/                          # Local Python environment; excluded from Git
+├── COLAB.md                        # step-by-step Colab guide for notebook 01
 ├── data/                           # Local datasets; contents excluded from Git
 │   └── .gitkeep                    # Keeps this directory in the repository
 ├── docs/
 │   └── EXTRA_MODELS_AMBER.md       # Extra models + AMBER: protocol, how to run, verification status
 ├── notebooks/
-│   ├── 00_audit_existing_cache.ipynb
-│   ├── 01_colab_pope_feature_extraction.ipynb   # Qwen2-VL-2B on POPE (GPU)
+│   ├── 00_audit_existing_cache.ipynb            # audit of the old 100-sample cache + POPE structure (CPU)
+│   ├── 01_colab_pope_feature_extraction.ipynb   # Qwen2-VL-2B on POPE (GPU, Colab)
 │   ├── 02_pope_baseline_visuals.ipynb           # baselines + visuals on the POPE cache (CPU)
-│   └── 03_colab_extra_models_amber.ipynb        # extra models and AMBER (GPU)
-├── results/                        # figures, tables, small outputs; *.pt caches are gitignored
-│   └── cached_features/            # Stored hidden states across layers
+│   ├── 03_colab_extra_models_amber.ipynb        # any registered model on POPE / AMBER (GPU, Colab)
+│   └── 04_colab_qwen25vl_3b_pope_amber.ipynb    # Qwen2.5-VL-3B on POPE then AMBER, smoke-test gated (GPU, Colab; not yet run)
+├── results/
+│   ├── cached_features/            # hidden-state caches (*.pt gitignored) + small metadata / run configs
+│   ├── figures/                    # notebook 02 baseline figures and results table (real data)
+│   └── final/                      # outputs of src/probe_transfer_eval.py, one sub-folder per run, plus SUMMARY.md
 ├── src/
 │   ├── download_datasets.py        # POPE dataset downloading and disk caching
-│   ├── feature_extraction.py       # OLD 100-sample script (reference only)
 │   ├── setupverify.py              # Environment & GPU verification
-│   ├── evaluation_baseline.py, abstention_curves.py, train_probe_regression.py   # baselines / probes on the Qwen2-VL cache
 │   ├── vlm_registry.py             # model list, prompt, yes/no scoring
 │   ├── vlm_datasets.py             # POPE + AMBER adapters, image-level splits
 │   ├── cache_io.py                 # cache file naming / loading
 │   ├── extract_features_multi.py   # GPU extraction for any registered model, POPE or AMBER
-│   └── probe_transfer_eval.py      # CPU: layer-wise probes + POPE -> AMBER transfer
+│   ├── probe_transfer_eval.py      # CPU: layer sweep, probes, baselines, transfer, paired tests, calibration, AURC
+│   ├── probe_stats.py              # pure statistics: paired image bootstrap, ECE/Brier, Platt, accuracy-coverage areas
+│   ├── followup_errormix.py        # CPU: error-mix follow-up (E0 sign diagnostic, E1 re-weighting, E2 answer-conditioned probes)
+│   └── old/                        # superseded legacy script (see src/old/README.md); the mock-data scripts were deleted
 ├── tests/                          # pytest, CPU only (python -m pytest tests)
 ├── requirements.txt                # Project dependencies
-├── requirements-extra.txt          # Extra dependencies for src/extract_features_multi.py (Colab) and the evaluation script
+├── requirements-extra.txt          # Extra dependencies for extraction (Colab), evaluation and tests
 └── README.md
 ```

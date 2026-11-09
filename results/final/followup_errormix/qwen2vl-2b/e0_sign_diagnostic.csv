@@ -1,0 +1,37 @@
+model,eval_set,score,rows,auroc,ci_lo,ci_hi,n,n_pos
+qwen2vl-2b,POPE test,original POPE probe,all rows,0.8916599595976825,0.8512534238717552,0.9252019581756266,1314,163
+qwen2vl-2b,POPE test,original POPE probe,answered yes,0.8611111111111112,0.7850844710662325,0.9174468023255814,550,28
+qwen2vl-2b,POPE test,original POPE probe,answered no,0.8836836836836837,0.82974636057528,0.928292927663188,764,135
+qwen2vl-2b,POPE test,1 - original probe,all rows,0.10834004040231753,0.07479804182437338,0.1487465761282448,1314,163
+qwen2vl-2b,POPE test,1 - original probe,answered yes,0.1388888888888889,0.0825531976744186,0.2149155289337674,550,28
+qwen2vl-2b,POPE test,1 - original probe,answered no,0.11631631631631631,0.07170707233681198,0.17025363942472008,764,135
+qwen2vl-2b,POPE test,trivial: model answered no,all rows,0.6408697691524575,0.6129158407652296,0.6677954809210146,1314,163
+qwen2vl-2b,POPE test,trivial: model answered no,answered yes,0.5,0.5,0.5,550,28
+qwen2vl-2b,POPE test,trivial: model answered no,answered no,0.5,0.5,0.5,764,135
+qwen2vl-2b,AMBER existence test,original POPE probe,all rows,0.45322793148880103,0.33346918539740406,0.5710867586471208,160,22
+qwen2vl-2b,AMBER existence test,original POPE probe,answered yes,0.667572463768116,0.49045271122320305,0.8089238149597738,85,16
+qwen2vl-2b,AMBER existence test,original POPE probe,answered no,0.21739130434782605,0.11599223946784921,0.3521153846153846,75,6
+qwen2vl-2b,AMBER existence test,1 - original probe,all rows,0.546772068511199,0.4289132413528792,0.6665308146025959,160,22
+qwen2vl-2b,AMBER existence test,1 - original probe,answered yes,0.33242753623188404,0.19107618504022614,0.5095472887767969,85,16
+qwen2vl-2b,AMBER existence test,1 - original probe,answered no,0.782608695652174,0.6478846153846154,0.8840077605321508,75,6
+qwen2vl-2b,AMBER existence test,trivial: model answered no,all rows,0.38636363636363635,0.30029469090130856,0.48968407249806584,160,22
+qwen2vl-2b,AMBER existence test,trivial: model answered no,answered yes,0.5,0.5,0.5,85,16
+qwen2vl-2b,AMBER existence test,trivial: model answered no,answered no,0.5,0.5,0.5,75,6
+qwen2vl-2b,AMBER attribute test,original POPE probe,all rows,0.35169491525423724,0.20643163450722504,0.4965344543112706,134,16
+qwen2vl-2b,AMBER attribute test,original POPE probe,answered yes,0.5000000000000001,0.29604770229770233,0.7087215909090908,33,13
+qwen2vl-2b,AMBER attribute test,original POPE probe,answered no,0.4727891156462585,0.07128427128427126,0.8991011235955056,101,3
+qwen2vl-2b,AMBER attribute test,1 - original probe,all rows,0.6485699152542372,0.50354982718894,0.79396909665138,134,16
+qwen2vl-2b,AMBER attribute test,1 - original probe,answered yes,0.5019230769230769,0.2913935406698565,0.7048513986013986,33,13
+qwen2vl-2b,AMBER attribute test,1 - original probe,answered no,0.5272108843537415,0.1008988764044944,0.9287157287157288,101,3
+qwen2vl-2b,AMBER attribute test,trivial: model answered no,all rows,0.1784957627118644,0.08365,0.2938339438339437,134,16
+qwen2vl-2b,AMBER attribute test,trivial: model answered no,answered yes,0.5,0.5,0.5,33,13
+qwen2vl-2b,AMBER attribute test,trivial: model answered no,answered no,0.5,0.5,0.5,101,3
+qwen2vl-2b,AMBER relation test,original POPE probe,all rows,0.5903047091412742,0.5045558171284547,0.6808470847084708,133,38
+qwen2vl-2b,AMBER relation test,original POPE probe,answered yes,0.7142857142857143,0.48984848484848487,0.9120883361921097,59,7
+qwen2vl-2b,AMBER relation test,original POPE probe,answered no,0.3488372093023256,0.25035204991087345,0.46572167642140455,74,31
+qwen2vl-2b,AMBER relation test,1 - original probe,all rows,0.4096952908587258,0.31915291529152917,0.4954441828715453,133,38
+qwen2vl-2b,AMBER relation test,1 - original probe,answered yes,0.2857142857142857,0.08791166380789023,0.5101515151515151,59,7
+qwen2vl-2b,AMBER relation test,1 - original probe,answered no,0.6511627906976745,0.5342783235785954,0.7496479500891265,74,31
+qwen2vl-2b,AMBER relation test,trivial: model answered no,all rows,0.6815789473684211,0.6129492477914807,0.7406924010455562,133,38
+qwen2vl-2b,AMBER relation test,trivial: model answered no,answered yes,0.5,0.5,0.5,59,7
+qwen2vl-2b,AMBER relation test,trivial: model answered no,answered no,0.5,0.5,0.5,74,31

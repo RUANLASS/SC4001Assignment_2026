@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-PROMPT_SUFFIX = " Answer yes or no."  # frozen; same string as src/feature_extraction.py and notebook 01
+PROMPT_SUFFIX = " Answer yes or no."  # frozen; same string as the legacy src/old/feature_extraction.py and notebook 01
 
 
 def make_prompt(question: str) -> str:

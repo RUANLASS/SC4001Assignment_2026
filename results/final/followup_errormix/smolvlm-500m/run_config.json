@@ -1,0 +1,88 @@
+{
+  "model": "smolvlm-500m",
+  "seed": 0,
+  "n_boot": 500,
+  "n_boot_paired": 1000,
+  "prediction": "If H5 is right, removing the answer-direction shortcut should lift AMBER existence and attribute Task B AUROC clearly above 0.5 (95% CI entirely above 0.5), ideally close to the output baselines, at a modest cost on POPE test. If the variants still score at or below about 0.5 on those subsets, H5 is not supported.",
+  "probe": "logreg",
+  "selection": "POPE dev only (weighted dev AUROC for E1); AMBER train split used only for E1b error shares and the ceiling probe",
+  "e1b_amber_train_halluc_share": {
+    "existence": 0.329608938547486,
+    "attribute": 0.5294117647058824,
+    "relation": 0.11297071129707113
+  },
+  "selected": {
+    "orig": {
+      "layer": 23,
+      "C": 0.001,
+      "pope_dev_auroc": 0.8858023332599605
+    },
+    "e1a": {
+      "layer": 32,
+      "C": 0.0001,
+      "pope_dev_auroc": 0.8388122557054596
+    },
+    "e1b_existence": {
+      "layer": 20,
+      "C": 0.001,
+      "pope_dev_auroc": 0.8482016986827962
+    },
+    "e1b_attribute": {
+      "layer": 32,
+      "C": 0.0001,
+      "pope_dev_auroc": 0.8397884696685384
+    },
+    "e1b_relation": {
+      "layer": 23,
+      "C": 0.001,
+      "pope_dev_auroc": 0.8884083589157321
+    },
+    "e2_yes": {
+      "layer": 16,
+      "C": 0.01,
+      "pope_dev_auroc": 0.8753623188405797
+    },
+    "e2_no": {
+      "layer": 16,
+      "C": 0.001,
+      "pope_dev_auroc": 0.9017423717059639
+    }
+  },
+  "reproduction_check": {
+    "AMBER existence test": {
+      "reference": "results/final/cross_model_logreg/transfer_amber.csv",
+      "reference_auroc": 0.6162322525958889,
+      "this_run_auroc": 0.6162322525958889
+    },
+    "AMBER attribute test": {
+      "reference": "results/final/cross_model_logreg/transfer_amber.csv",
+      "reference_auroc": 0.44595274007038715,
+      "this_run_auroc": 0.44595274007038715
+    },
+    "AMBER relation test": {
+      "reference": "results/final/cross_model_logreg/transfer_amber.csv",
+      "reference_auroc": 0.5528455284552846,
+      "this_run_auroc": 0.5528455284552846
+    }
+  },
+  "rows": {
+    "pope": 3000,
+    "amber": 3000,
+    "pope_test": 444,
+    "amber_test": {
+      "existence": 160,
+      "attribute": 134,
+      "relation": 133
+    }
+  },
+  "cache_files": {
+    "pope": {
+      "features": "pope_smolvlm-500m_features.pt",
+      "metadata": "pope_smolvlm-500m_metadata.parquet"
+    },
+    "amber": {
+      "features": "amber_smolvlm-500m_features.pt",
+      "metadata": "amber_smolvlm-500m_metadata.parquet"
+    }
+  }
+}

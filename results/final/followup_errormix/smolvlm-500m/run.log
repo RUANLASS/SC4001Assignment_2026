@@ -1,0 +1,46 @@
+PREDICTION (stated before any result): If H5 is right, removing the answer-direction shortcut should lift AMBER existence and attribute Task B AUROC clearly above 0.5 (95% CI entirely above 0.5), ideally close to the output baselines, at a modest cost on POPE test. If the variants still score at or below about 0.5 on those subsets, H5 is not supported.
+[smolvlm-500m] POPE rows 3000 (train 2053 / dev 503 / test 444, errors in test 96); AMBER rows 3000; layers 33
+[smolvlm-500m] hallucinated-yes share of errors: POPE train (natural) 0.139; E1a uses 0.500; E1b uses (AMBER train split, target-domain statistics) existence=0.330, attribute=0.529, relation=0.113
+[smolvlm-500m] E2 rows: answered-yes train 778 (errors 50) dev 176 (errors 15) | answered-no train 1275 (errors 310) dev 327 (errors 103)
+[smolvlm-500m] layer  0/32 done
+[smolvlm-500m] layer  1/32 done
+[smolvlm-500m] layer  2/32 done
+[smolvlm-500m] layer  3/32 done
+[smolvlm-500m] layer  4/32 done
+[smolvlm-500m] layer  5/32 done
+[smolvlm-500m] layer  6/32 done
+[smolvlm-500m] layer  7/32 done
+[smolvlm-500m] layer  8/32 done
+[smolvlm-500m] layer  9/32 done
+[smolvlm-500m] layer 10/32 done
+[smolvlm-500m] layer 11/32 done
+[smolvlm-500m] layer 12/32 done
+[smolvlm-500m] layer 13/32 done
+[smolvlm-500m] layer 14/32 done
+[smolvlm-500m] layer 15/32 done
+[smolvlm-500m] layer 16/32 done
+[smolvlm-500m] layer 17/32 done
+[smolvlm-500m] layer 18/32 done
+[smolvlm-500m] layer 19/32 done
+[smolvlm-500m] layer 20/32 done
+[smolvlm-500m] layer 21/32 done
+[smolvlm-500m] layer 22/32 done
+[smolvlm-500m] layer 23/32 done
+[smolvlm-500m] layer 24/32 done
+[smolvlm-500m] layer 25/32 done
+[smolvlm-500m] layer 26/32 done
+[smolvlm-500m] layer 27/32 done
+[smolvlm-500m] layer 28/32 done
+[smolvlm-500m] layer 29/32 done
+[smolvlm-500m] layer 30/32 done
+[smolvlm-500m] layer 31/32 done
+[smolvlm-500m] layer 32/32 done
+[smolvlm-500m] selected orig: layer 23, C=0.001, POPE-dev AUROC (weighted for E1) 0.886
+[smolvlm-500m] selected e1a: layer 32, C=0.0001, POPE-dev AUROC (weighted for E1) 0.839
+[smolvlm-500m] selected e1b_existence: layer 20, C=0.001, POPE-dev AUROC (weighted for E1) 0.848
+[smolvlm-500m] selected e1b_attribute: layer 32, C=0.0001, POPE-dev AUROC (weighted for E1) 0.840
+[smolvlm-500m] selected e1b_relation: layer 23, C=0.001, POPE-dev AUROC (weighted for E1) 0.888
+[smolvlm-500m] selected e2_yes: layer 16, C=0.01, POPE-dev AUROC (weighted for E1) 0.875
+[smolvlm-500m] selected e2_no: layer 16, C=0.001, POPE-dev AUROC (weighted for E1) 0.902
+[smolvlm-500m] original probe reproduces the main run's AMBER Task B AUROCs: max |difference| = 0.00e+00
+[smolvlm-500m] results written to results/final/followup_errormix/smolvlm-500m

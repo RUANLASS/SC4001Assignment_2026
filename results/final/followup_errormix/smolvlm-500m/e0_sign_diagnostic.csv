@@ -1,0 +1,37 @@
+model,eval_set,score,rows,auroc,ci_lo,ci_hi,n,n_pos
+smolvlm-500m,POPE test,original POPE probe,all rows,0.8619492337164751,0.8262749680673009,0.8983751702382996,444,96
+smolvlm-500m,POPE test,original POPE probe,answered yes,0.8262931034482759,0.6842415917415918,0.9349222170106316,161,16
+smolvlm-500m,POPE test,original POPE probe,answered no,0.8540024630541873,0.8082230043014357,0.8948860468885048,283,80
+smolvlm-500m,POPE test,1 - original probe,all rows,0.13805076628352492,0.10162482976170042,0.1737250319326991,444,96
+smolvlm-500m,POPE test,1 - original probe,answered yes,0.17370689655172417,0.06507778298936832,0.3157584082584081,161,16
+smolvlm-500m,POPE test,1 - original probe,answered no,0.1459975369458128,0.10511395311149524,0.19177699569856432,283,80
+smolvlm-500m,POPE test,trivial: model answered no,all rows,0.625,0.5841889699036513,0.6626023615444284,444,96
+smolvlm-500m,POPE test,trivial: model answered no,answered yes,0.5,0.5,0.5,161,16
+smolvlm-500m,POPE test,trivial: model answered no,answered no,0.5,0.5,0.5,283,80
+smolvlm-500m,AMBER existence test,original POPE probe,all rows,0.6162322525958889,0.5130360789652825,0.7062611406320287,160,39
+smolvlm-500m,AMBER existence test,original POPE probe,answered yes,0.6802884615384616,0.5599951566711591,0.8002380952380953,68,16
+smolvlm-500m,AMBER existence test,original POPE probe,answered no,0.6017643352236925,0.4783504353233831,0.707242873216869,92,23
+smolvlm-500m,AMBER existence test,1 - original probe,all rows,0.383767747404111,0.29373885936797123,0.4869639210347174,160,39
+smolvlm-500m,AMBER existence test,1 - original probe,answered yes,0.31971153846153844,0.19976190476190475,0.440004843328841,68,16
+smolvlm-500m,AMBER existence test,1 - original probe,answered no,0.39823566477630745,0.2927571267831309,0.5216495646766168,92,23
+smolvlm-500m,AMBER existence test,trivial: model answered no,all rows,0.5097478279296461,0.42081817842345665,0.6005813065722156,160,39
+smolvlm-500m,AMBER existence test,trivial: model answered no,answered yes,0.5,0.5,0.5,68,16
+smolvlm-500m,AMBER existence test,trivial: model answered no,answered no,0.5,0.5,0.5,92,23
+smolvlm-500m,AMBER attribute test,original POPE probe,all rows,0.44595274007038715,0.294095182834407,0.5915161872372396,134,17
+smolvlm-500m,AMBER attribute test,original POPE probe,answered yes,0.6203703703703705,0.3704967948717949,0.8475360576923074,30,12
+smolvlm-500m,AMBER attribute test,original POPE probe,answered no,0.5454545454545454,0.2376307957393484,0.864593388913266,104,5
+smolvlm-500m,AMBER attribute test,1 - original probe,all rows,0.5540472599296128,0.4084838127627604,0.705904817165593,134,17
+smolvlm-500m,AMBER attribute test,1 - original probe,answered yes,0.37962962962962965,0.15246394230769234,0.6295032051282051,30,12
+smolvlm-500m,AMBER attribute test,1 - original probe,answered no,0.4545454545454546,0.1354066110867339,0.7623692042606516,104,5
+smolvlm-500m,AMBER attribute test,trivial: model answered no,all rows,0.2239819004524887,0.11405127448745626,0.34020259646438883,134,17
+smolvlm-500m,AMBER attribute test,trivial: model answered no,answered yes,0.5,0.5,0.5,30,12
+smolvlm-500m,AMBER attribute test,trivial: model answered no,answered no,0.5,0.5,0.5,104,5
+smolvlm-500m,AMBER relation test,original POPE probe,all rows,0.5528455284552846,0.46503747501665554,0.641364705882353,133,51
+smolvlm-500m,AMBER relation test,original POPE probe,answered yes,0.6016260162601625,0.36885659270126536,0.7943964198286413,50,9
+smolvlm-500m,AMBER relation test,original POPE probe,answered no,0.3478513356562137,0.24603018285083503,0.4517756975304145,83,42
+smolvlm-500m,AMBER relation test,1 - original probe,all rows,0.44715447154471544,0.35863529411764705,0.5349625249833444,133,51
+smolvlm-500m,AMBER relation test,1 - original probe,answered yes,0.3983739837398374,0.20560358017135866,0.6311434072987346,50,9
+smolvlm-500m,AMBER relation test,1 - original probe,answered no,0.6521486643437864,0.5482243024695855,0.753969817149165,83,42
+smolvlm-500m,AMBER relation test,trivial: model answered no,all rows,0.6617647058823529,0.601732340077879,0.7220650944324217,133,51
+smolvlm-500m,AMBER relation test,trivial: model answered no,answered yes,0.5,0.5,0.5,50,9
+smolvlm-500m,AMBER relation test,trivial: model answered no,answered no,0.5,0.5,0.5,83,42

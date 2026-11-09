@@ -1,0 +1,25 @@
+logreg probe is deterministic -> using seed 0 only (--seeds applies to the MLP probe)
+[qwen2vl-2b] no AMBER cache found -> transfer skipped for this model
+[qwen2vl-2b] task B: train 6246 (pos 722) | dev 1440 (pos 200) | test 1314 (pos 163) | selection: 5-fold image-grouped CV on train+dev
+[qwen2vl-2b] task B seed 0: best layer 28 (CV AUROC 0.904, test 0.894, param 0.001, pca None)
+[qwen2vl-2b] task A: train 2599 (pos 99) | dev 586 (pos 33) | test 550 (pos 28) | selection: 5-fold image-grouped CV on train+dev
+[qwen2vl-2b] task A seed 0: best layer 16 (CV AUROC 0.907, test 0.898, param 0.001, pca None)
+
+=== POPE test (Task B = primary; probe layer + regularisation chosen on dev/CV, never on test) ===
+     model task  seed                        method  layer  auroc  ci_lo  ci_hi    n  n_pos
+qwen2vl-2b    B     0    baseline: token prob (raw)    NaN  0.801  0.736  0.858 1314    163
+qwen2vl-2b    B     0 baseline: margin (|log-odds|)    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0      baseline: binary entropy    NaN  0.800  0.734  0.857 1314    163
+qwen2vl-2b    B     0       baseline: vocab entropy    NaN  0.798  0.744  0.844 1314    163
+qwen2vl-2b    B     0                probe (logreg)   28.0  0.894  0.855  0.927 1314    163
+qwen2vl-2b    B     0     probe (logit-only logreg)   28.0  0.804  0.740  0.858 1314    163
+qwen2vl-2b    B     0 probe (hidden+logits, logreg)   28.0  0.894  0.855  0.927 1314    163
+qwen2vl-2b    A     0    baseline: token prob (raw)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0 baseline: margin (|log-odds|)    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0      baseline: binary entropy    NaN  0.832  0.754  0.895  550     28
+qwen2vl-2b    A     0       baseline: vocab entropy    NaN  0.803  0.735  0.874  550     28
+qwen2vl-2b    A     0                probe (logreg)   16.0  0.898  0.842  0.947  550     28
+qwen2vl-2b    A     0     probe (logit-only logreg)   16.0  0.833  0.764  0.893  550     28
+qwen2vl-2b    A     0 probe (hidden+logits, logreg)   16.0  0.899  0.843  0.947  550     28
+
+Tables and figures written to results/final/qwen_logreg_cv5
