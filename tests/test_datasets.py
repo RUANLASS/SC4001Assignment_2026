@@ -9,7 +9,7 @@ from vlm_datasets import (AMBER_EXPECTED, AMBER_RANGES, DatasetBundle, amber_rep
 
 
 def test_split_rule_is_notebook01_rule():
-    # literal copy of the formula in notebook 01 / 02
+    # reference implementation of the split rule
     def nb(image_id, seed=0, fr=(0.70, 0.15, 0.15)):
         u = int(hashlib.md5(f"{seed}-{image_id}".encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
         return "train" if u < fr[0] else ("dev" if u < fr[0] + fr[1] else "test")
@@ -69,8 +69,7 @@ def test_build_amber_meta(as_dict):
 
 
 def test_build_amber_meta_real_annotation_format():
-    """Entries copied in shape from the real AMBER annotations.json: generative rows carry LIST truths ('truth': [...],
-    'hallu': [...]), discriminative rows carry the string 'yes' / 'no'. Existence is balanced in the real data."""
+    """Entries shaped like AMBER annotations.json: generative rows have list truths, discriminative rows 'yes' / 'no'."""
     ann = [dict(id=1, type="generative", truth=["sky", "forest"], hallu=["cloud", "sun"]),
            dict(id=1005, type="discriminative", truth="yes"), dict(id=1006, type="discriminative", truth="no"),
            dict(id=5929, type="discriminative-attribute", truth="no"),

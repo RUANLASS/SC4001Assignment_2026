@@ -1,21 +1,14 @@
 #!/usr/bin/env python
-"""Extract last-prompt-token hidden states + yes/no scores from a VLM on POPE or AMBER.
-
-Generalises notebook 01 (Qwen2-VL-2B on POPE) to more models and to AMBER, with the SAME protocol and the same output
-columns, so caches from different models/datasets can be probed and compared with one evaluation script.
+"""Extract last-prompt-token hidden states and yes/no scores from a VLM on POPE or AMBER.
 
     python src/extract_features_multi.py --list-models
-    python src/extract_features_multi.py --dataset amber --inspect                       # check AMBER files, no GPU
-    python src/extract_features_multi.py --model smolvlm-500m --dataset pope --smoke 20   # 20 questions, prints diagnostics
+    python src/extract_features_multi.py --dataset amber --inspect
+    python src/extract_features_multi.py --model smolvlm-500m --dataset pope --smoke 20
     python src/extract_features_multi.py --model smolvlm-500m --dataset pope --subset-size 3000
     python src/extract_features_multi.py --model qwen2vl-2b  --dataset amber --per-subset 1000
 
-GPU REQUIRED for the model run (use notebooks/03_colab_extra_models_amber.ipynb). Resumable: finished 100-question
-shards are skipped on restart. Outputs (in --out-dir, default results/cached_features/), with stem = {dataset}_{model}:
-    {stem}_features.pt        {"features": [N, L, H] float16, "row_idx": [N], "layers": [...], ...}
-    {stem}_metadata.parquet   one row per question (same columns as pope_metadata.parquet, plus dataset/model/n_input_tokens)
-    {stem}_run_config.json    model, prompt, token ids, seed, versions, status
-    {stem}_shards/            resume files (npz); safe to delete once the run is complete
+Requires a GPU for model runs. Resumable via shard files. Outputs in --out-dir, stem = {dataset}_{model}:
+    {stem}_features.pt, {stem}_metadata.parquet, {stem}_run_config.json, {stem}_shards/
 """
 from __future__ import annotations
 
@@ -35,9 +28,7 @@ from vlm_datasets import (DatasetBundle, amber_report, load_amber, load_pope, se
 from vlm_registry import REGISTRY, ModelSpec, make_prompt, parse_layers, resolve_yes_no_ids, score_logits
 
 
-# ====================================================================================================================
-# Model backend (GPU, transformers). Anything model-specific lives here; the rest of the file is backend-agnostic.
-# ====================================================================================================================
+# Model backend
 class HFBackend:
     """forward(question, PIL image) -> (hidden [len(layers), H] float32, logits [V] float32, n_input_tokens)."""
 
@@ -62,7 +53,7 @@ class HFBackend:
         self.model = self._load_model()
         cfg = self.model.config
         text_cfg = cfg.get_text_config() if hasattr(cfg, "get_text_config") else getattr(cfg, "text_config", cfg)
-        self.n_entries = int(text_cfg.num_hidden_layers) + 1          # embeddings + every transformer layer
+        self.n_entries = int(text_cfg.num_hidden_layers) + 1  # embeddings + every transformer layer
         self.hidden_size = int(text_cfg.hidden_size)
         self.layers = parse_layers(layers, self.n_entries)
         self.info = dict(hf_id=spec.hf_id, dtype=spec.dtype, quant_4bit=spec.quant_4bit,
@@ -107,7 +98,7 @@ class HFBackend:
         torch = self.torch
         text = self.render(question)
         inputs = self.processor(text=text, images=[image.convert("RGB")], return_tensors="pt")
-        inputs = inputs.to(self.device, self.torch_dtype)             # moves everything, casts only float tensors
+        inputs = inputs.to(self.device, self.torch_dtype)
         with torch.inference_mode():
             out = self.model(**inputs, output_hidden_states=True, use_cache=False)
         hs = out.hidden_states
@@ -123,9 +114,7 @@ class HFBackend:
             self.torch.cuda.empty_cache()
 
 
-# ====================================================================================================================
-# Backend-agnostic extraction loop with shard checkpointing (unit-tested with a fake backend)
-# ====================================================================================================================
+# Extraction loop with shard checkpointing
 def _json_default(o):
     return o.item() if hasattr(o, "item") else str(o)
 
@@ -158,7 +147,7 @@ def save_shard(shard_dir: Path, k: int, row_idx, features: np.ndarray, recs: lis
     tmp, final = shard_dir / f"shard_{k:05d}.tmp.npz", shard_dir / f"shard_{k:05d}.npz"
     np.savez(tmp, row_idx=np.asarray(row_idx, dtype=np.int64), features=features,
              meta_json=np.array(json.dumps(recs, default=_json_default)))
-    os.replace(tmp, final)                                            # a shard is either complete or absent
+    os.replace(tmp, final)
 
 
 def load_done(shard_dir: Path):
@@ -252,9 +241,7 @@ def write_meta(meta: pd.DataFrame, path: Path) -> Path:
         return csv
 
 
-# ====================================================================================================================
 # Verification and smoke test
-# ====================================================================================================================
 def summarise(meta: pd.DataFrame) -> pd.DataFrame:
     m = meta.copy()
     m["correct"] = (m["pred_answer"] == m["gt_answer"]).astype(int)
@@ -316,7 +303,7 @@ def smoke_test(backend, bundle: DatasetBundle, n: int, model_key: str, seed: int
         print(f"  row {rec['row_idx']:5d} gt={rec['gt_answer']:3s} pred={rec['pred_answer']:3s} p_yes_norm={rec['p_yes_norm']:.3f} "
               f"mass={rec['answer_mass']:.3f} top1={rec['top1_token']!r} tokens={rec['n_input_tokens']}")
     mass = np.mean([x["answer_mass"] for x in recs])
-    spq = float(np.mean(secs[1:] if len(secs) > 1 else secs))             # skip the first (warm-up) call
+    spq = float(np.mean(secs[1:] if len(secs) > 1 else secs))
     print(f"\nhidden state shape per question: {hidden.shape} | mean answer_mass {mass:.3f} | {spq:.2f} s/question")
     print(f"estimated time for the {len(bundle.selected)} selected questions: {spq * len(bundle.selected) / 3600:.1f} h")
     if mass < 0.8:
@@ -327,9 +314,7 @@ def smoke_test(backend, bundle: DatasetBundle, n: int, model_key: str, seed: int
     return mass, spq
 
 
-# ====================================================================================================================
 # CLI
-# ====================================================================================================================
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--model", choices=sorted(REGISTRY), help="model key (see --list-models)")
