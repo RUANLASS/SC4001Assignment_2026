@@ -1,14 +1,7 @@
-"""Model registry and answer scoring for the multi-model hallucination-probing experiments.
+"""Model registry and yes/no answer scoring (numpy only; model loading is in extract_features_multi.py).
 
-Everything here is pure Python / numpy (no torch, no transformers), so it can be unit-tested on a laptop.
-The GPU-only parts (loading a model and running it) live in ``extract_features_multi.py``.
-
-Protocol (identical for every model, and identical to the Qwen2-VL-2B run in notebook 01):
-  * prompt          = "{question} Answer yes or no."  wrapped in the model's chat format, one image, generation prompt on
-  * scored position = the LAST PROMPT TOKEN (the position that predicts the first answer token)
-  * yes/no score    = forced choice: P(yes) = sum of probabilities of the "yes" token ids, P(no) likewise;
-                      predicted answer is "yes" iff P(yes) > P(no)
-  * hallucination   = 1 iff predicted yes AND ground truth no
+Protocol: prompt "{question} Answer yes or no." in the model's chat format; features and scores are taken at the last
+prompt token; predicted answer is "yes" iff P(yes) > P(no); hallucination = predicted yes and ground truth no.
 """
 from __future__ import annotations
 
@@ -16,7 +9,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-PROMPT_SUFFIX = " Answer yes or no."  # frozen; same string as the legacy src/old/feature_extraction.py and notebook 01
+PROMPT_SUFFIX = " Answer yes or no."
 
 
 def make_prompt(question: str) -> str:
@@ -36,8 +29,7 @@ class ModelSpec:
     notes: str = ""
 
 
-# Qwen processors resize to a pixel budget. POPE images (COCO, <= 640x640 = 0.41 MP) are untouched by this cap, so the
-# Qwen2-VL-2B features stay identical to the teammate run; the cap only protects against the very large AMBER images.
+# Pixel cap for Qwen processors (does not affect POPE-sized images)
 _QWEN_PIXELS = {"max_pixels": 1280 * 28 * 28}
 
 REGISTRY: dict[str, ModelSpec] = {
@@ -61,9 +53,7 @@ REGISTRY: dict[str, ModelSpec] = {
 }
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # yes / no token ids
-# --------------------------------------------------------------------------------------------------------------------
 _YES = ["Yes", "yes", "YES"]
 _NO = ["No", "no", "NO"]
 
@@ -81,10 +71,8 @@ def _single_token_ids(encode, strings):
 def resolve_yes_no_ids(encode, space_variants: bool = False):
     """Return (yes_map, no_map): {string: token id} for the single-token spellings of yes / no.
 
-    ``encode`` is ``lambda s: tokenizer.encode(s, add_special_tokens=False)``.
-    With ``space_variants`` the leading-space spellings (" Yes", ...) are scored as well. Raises if either side is empty or
-    the two sides share a token id. Always print the result and check ``answer_mass`` (see ``smoke`` mode): if the first
-    answer token is not one of these ids, P(yes) + P(no) will be far below 1.
+    ``encode`` is ``lambda s: tokenizer.encode(s, add_special_tokens=False)``. With ``space_variants`` the
+    leading-space spellings are included. Raises if either side is empty or the two sides overlap.
     """
     yes_s = _YES + ([" " + s for s in _YES] if space_variants else [])
     no_s = _NO + ([" " + s for s in _NO] if space_variants else [])
@@ -96,9 +84,7 @@ def resolve_yes_no_ids(encode, space_variants: bool = False):
     return yes_map, no_map
 
 
-# --------------------------------------------------------------------------------------------------------------------
-# scoring (numpy, float64) - mirrors score_logits() in notebook 01
-# --------------------------------------------------------------------------------------------------------------------
+# scoring
 def _logsumexp(a: np.ndarray) -> float:
     m = float(np.max(a))
     return m + float(np.log(np.sum(np.exp(a - m))))
@@ -114,7 +100,7 @@ def score_logits(logits: np.ndarray, yes_ids, no_ids) -> dict:
     p_yes_norm = 1.0 / (1.0 + np.exp(-margin))
     q = min(max(p_yes_norm, 1e-12), 1 - 1e-12)
     binary_entropy = -(q * np.log2(q) + (1 - q) * np.log2(1 - q))
-    vocab_entropy = float(-(np.exp(logp) * logp).sum())          # natural log, as in notebook 01
+    vocab_entropy = float(-(np.exp(logp) * logp).sum())        
     return dict(p_yes=float(np.exp(lp_yes)), p_no=float(np.exp(lp_no)), p_yes_norm=float(p_yes_norm),
                 margin=float(margin), binary_entropy=float(binary_entropy), vocab_entropy=vocab_entropy,
                 top1_id=int(np.argmax(x)))

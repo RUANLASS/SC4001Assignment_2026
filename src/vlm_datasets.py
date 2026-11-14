@@ -1,12 +1,8 @@
-"""Dataset adapters (POPE, AMBER) for the multi-model extraction.
+"""Dataset adapters (POPE, AMBER) for feature extraction.
 
-Conventions copied EXACTLY from notebook 01 so that rows and splits line up with the team's Qwen2-VL-2B cache:
-  * ``row_idx``  = position in the dataset (POPE: row in the HF 'test' split)
-  * processing order = ``np.random.default_rng(seed).shuffle(arange(n))``; a subset of size N is the FIRST N of that order,
-    so a smaller run on any model is a subset of the same questions
-  * split = md5('{seed}-{image_id}') -> train / dev / test = 70 / 15 / 15 %, decided BY IMAGE (no image in two splits)
-
-Heavy imports (datasets, PIL) are done lazily so the pure logic can be unit-tested without them.
+  * row_idx = position in the dataset
+  * processing order = seeded shuffle; a subset of size N is the first N of that order
+  * split = md5 of seed and image id -> train / dev / test = 70 / 15 / 15 %, so no image appears in two splits
 """
 from __future__ import annotations
 
@@ -45,9 +41,7 @@ class DatasetBundle:
 REQUIRED_COLS = ["row_idx", "id", "question_id", "image_id", "setting", "question", "gt_answer"]
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # POPE
-# --------------------------------------------------------------------------------------------------------------------
 def load_pope(local_path: str = "data/pope", hf_name: str = "lmms-lab-encoder/POPE") -> DatasetBundle:
     from datasets import load_dataset, load_from_disk
     p = Path(local_path)
@@ -78,11 +72,7 @@ def select_pope(bundle: DatasetBundle, subset_size: int | None, seed: int = 0) -
     return bundle
 
 
-# --------------------------------------------------------------------------------------------------------------------
-# AMBER (discriminative part only: yes/no queries)
-# --------------------------------------------------------------------------------------------------------------------
-# Verified arithmetic: discriminative ids run 1005..15220 (14,216 queries = 4,924 + 7,628 + 1,664, AMBER paper Table 8);
-# the first relation query ("Is there direct contact between ...") has id 13557 = 1005 + 4924 + 7628.
+# AMBER (discriminative yes/no queries only)
 AMBER_RANGES = {"existence": (1005, 5928), "attribute": (5929, 13556), "relation": (13557, 15220)}
 AMBER_EXPECTED = {"existence": 4924, "attribute": 7628, "relation": 1664}
 
@@ -121,7 +111,7 @@ def build_amber_meta(queries: list, annotations) -> pd.DataFrame:
         qid = int(q["id"])
         sub = amber_subset_of(qid)
         if sub is None:
-            continue                      # generative queries (ids 1..1004) are not yes/no
+            continue  # generative queries are not yes/no
         if qid not in truth:
             raise KeyError(f"query id {qid} has no ground truth in annotations.json")
         rows.append(dict(id=qid, question_id=qid, image_id=str(q["image"]), setting=sub,
@@ -153,7 +143,7 @@ def select_amber(bundle: DatasetBundle, subsets, per_subset: int | None, seed: i
 
 
 def amber_report(meta: pd.DataFrame) -> str:
-    """Human-readable schema/label summary; printed by --inspect and at the start of every AMBER run."""
+    """Per-subset size and label summary."""
     lines = [f"AMBER discriminative queries: {len(meta)}"]
     for sub, n_exp in AMBER_EXPECTED.items():
         d = meta[meta.setting == sub]
@@ -164,11 +154,7 @@ def amber_report(meta: pd.DataFrame) -> str:
 
 def load_amber(repo_dir: str = "data/amber_repo", images_dir: str | None = "data/amber_images",
                hf_images: str | None = None) -> DatasetBundle:
-    """Metadata from a clone of github.com/junyangwang0410/AMBER (data/query + data/annotations.json).
-
-    Pixels from ``images_dir`` (the AMBER_*.jpg files from the Google-Drive zip, searched recursively), or, if
-    ``hf_images`` is given (e.g. 'visual-preference/AMBER'), from that Hugging Face mirror matched by query id.
-    """
+    """Metadata from a clone of the AMBER repo; images from ``images_dir`` or, if given, the ``hf_images`` HF mirror."""
     repo = Path(repo_dir)
     q_path = repo / "data" / "query" / "query_discriminative.json"
     a_path = repo / "data" / "annotations.json"
@@ -190,7 +176,7 @@ def load_amber(repo_dir: str = "data/amber_repo", images_dir: str | None = "data
         from PIL import Image
         root = Path(images_dir)
         if not root.exists():
-            raise FileNotFoundError(f"AMBER image folder {root} not found (see docs/EXTRA_MODELS_AMBER.md).")
+            raise FileNotFoundError(f"AMBER image folder {root} not found (notebooks/03_colab_extra_models_amber.ipynb downloads the AMBER images; see README.md).")
         index = {p.name: p for p in root.rglob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png")}
         missing = sorted(set(meta["image_id"]) - set(index))
         if missing:

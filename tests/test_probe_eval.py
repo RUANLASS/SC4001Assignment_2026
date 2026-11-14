@@ -120,8 +120,7 @@ def test_transfer_to_shifted_domain_and_degenerate_existence(result):
         t = g("B", sub, "all", "probe POPE->AMBER").iloc[0]
         assert t.auroc > 0.75 and t.ci_lo <= t.auroc <= t.ci_hi      # signal survives a mean shift (scaler fit on POPE-train)
         assert len(g("B", sub, "test", "probe AMBER->AMBER")) == 1   # in-domain ceiling is computed
-    # In this synthetic fixture the 'existence' subset has only 'no' truths (real AMBER-existence is 50/50 yes/no; this is the
-    # degenerate edge case) -> Task A has a single class -> undefined, not a crash
+    # 'existence' has only 'no' truths here, so Task A has a single class: undefined, not a crash
     assert np.isnan(g("A", "existence", "all", "probe POPE->AMBER").auroc.iloc[0])
     assert g("A", "existence", "test", "probe AMBER->AMBER").empty
     # Task B on existence is defined (an error is exactly a 'yes' answer)
@@ -171,9 +170,7 @@ def test_end_to_end_run_with_files(tmp_path, monkeypatch):
     assert (layer_df.layer.isin([0, 2, 4, 3]) | (layer_df.layer == L - 1)).all()      # stride 2 keeps the last layer too
 
 
-# ====================================================================================================================
 # probe-training options (class weights, PCA, CV selection, seeds), leakage guards, combined probe, new tables
-# ====================================================================================================================
 def _split_rows(meta, task="B"):
     mask, y = pe.task_arrays(meta, task)
     return y, [pe.split_idx(meta, mask, s) for s in ("train", "dev", "test")]

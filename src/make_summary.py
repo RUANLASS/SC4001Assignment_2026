@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 """Write results/final/SUMMARY.md from the CSVs produced by src/probe_transfer_eval.py.
 
-Every number in the summary is read from a CSV (nothing is typed in by hand), so it can be regenerated after any re-run:
-
     python src/make_summary.py --final-dir results/final --cache-dir results/cached_features
-
-Run folders that do not exist are reported as "not run" instead of being invented. Missing cache files are listed explicitly.
 """
 from __future__ import annotations
 
@@ -19,9 +15,7 @@ import pandas as pd
 HID, LOG, COMB = "probe (logreg)", "probe (logit-only logreg)", "probe (hidden+logits, logreg)"
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # small formatting helpers
-# --------------------------------------------------------------------------------------------------------------------
 def f3(x) -> str:
     return "n/a" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{x:.3f}"
 
@@ -57,9 +51,7 @@ def missing_caches(cache_dir: Path) -> list[str]:
     return out
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # sections
-# --------------------------------------------------------------------------------------------------------------------
 def sec_takeaways(main: Path | None, runs: dict[str, Path], cache_dir: Path | None = None) -> str:
     """Key numbers and the caveats that go with them, all read from the CSVs of the main run (and the ablations)."""
     if main is None:
@@ -364,7 +356,7 @@ def sec_transfer(runs: list[Path]) -> str:
 
 
 def h5_verdict(df: pd.DataFrame) -> tuple[str, list[str]]:
-    """Verdict on H5 for one model, from followup_summary.csv. The rule is fixed in advance:
+    """Verdict on H5 for one model, from followup_summary.csv:
 
     * SUPPORTED: some target-free variant (E1a or E2) has, on BOTH AMBER existence and attribute (test split), a 95% CI entirely above 0.5 AND a
       significantly positive paired difference to the original probe (CI lower bound > 0).

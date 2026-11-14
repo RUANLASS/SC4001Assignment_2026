@@ -1,25 +1,11 @@
 #!/usr/bin/env python
-"""Follow-up experiment: is the POPE -> AMBER transfer failure caused by the error mix?  (hypothesis H5, Task B only; CPU only)
+"""Follow-up experiment (Task B, CPU only): is the POPE -> AMBER transfer failure caused by the error mix?
 
-PREDICTION (written before any result is computed; also printed first in run.log and stored in run_config.json)
-    If H5 is right, removing the answer-direction shortcut should lift the AMBER existence and attribute Task B AUROC clearly
-    above 0.5 (confidence interval entirely above 0.5), ideally close to the output baselines, at a modest cost on POPE test.
-    If the variants still score at or below about 0.5 on those subsets, H5 is not supported.
-
-Background. 85% of Qwen2-VL-2B's POPE errors are missed objects (answered "no", object present) but on AMBER the errors are mostly
-hallucinated "yes" (58% of existence, 71% of attribute, 18% of relation). A Task B probe trained on POPE may mostly have learned
-"the model said no, so it is probably wrong", which points the wrong way on AMBER.
-
-Experiments (all Task B = wrong vs right answer; logistic-regression probe exactly as in the main run: last prompt token, scaler on
-train, layer and C chosen on POPE DEV ONLY, test used for reporting only):
-  E0  sign diagnostic (no training): the original POPE probe split by the model's answer, the flipped score 1 - s, and the trivial
-      score "model answered no".
-  E1a error-type re-weighting, balanced (headline, no target information): hallucinated-yes and missed errors weigh equally in the
-      positive class. Layer / C re-selected on POPE dev with dev rows weighted the same way.
-  E1b the same, but the error-type proportions are those of each AMBER subset's TRAIN split. USES TARGET-DOMAIN STATISTICS (labelled
-      as such, never the headline); one probe per AMBER subset. AMBER dev/test labels are never used for any choice.
-  E2  answer-conditioned probes: one probe on rows answered "yes", one on rows answered "no" (each selected on the matching POPE dev
-      rows, each Platt-calibrated on those dev rows), routed by the model's answer at test time.
+Probes are logistic regression as in the main run (last prompt token; layer and C chosen on POPE dev only).
+  E0   sign diagnostic: original POPE probe split by the model's answer, flipped score, trivial "answered no" score
+  E1a  error-type re-weighting with hallucinated-yes and missed-object errors weighted equally
+  E1b  same, with error-type proportions taken from each AMBER subset's train split (uses target-domain statistics)
+  E2   answer-conditioned probes (one for "yes" rows, one for "no" rows), routed by the model's answer
 
     python src/followup_errormix.py --models qwen2vl-2b smolvlm-500m --out-dir results/final/followup_errormix
 """
@@ -57,18 +43,12 @@ class Tee:
         self.f.flush()
 
 
-# --------------------------------------------------------------------------------------------------------------------
-# pure helpers (unit-tested in tests/test_followup_errormix.py)
-# --------------------------------------------------------------------------------------------------------------------
+# helpers
 def error_type_weights(y, pred_yes, halluc_share: float) -> np.ndarray:
-    """Per-row weights that fix the error mix of the positive class (E1).
+    """Per-row weights fixing the error mix of the positive class (E1).
 
-    y: 1 = wrong answer. pred_yes: 1 = the model answered "yes". A wrong "yes" is a hallucinated yes, a wrong "no" a missed object.
-    Correct answers keep weight 1. The weights of the wrong answers are set so that
-      * the total positive weight equals the total negative weight (this replaces sklearn's class_weight="balanced"), and
-      * hallucinated-yes errors hold `halluc_share` of the positive weight and missed objects the remaining 1 - halluc_share.
-    With halluc_share equal to the natural share this reproduces class_weight="balanced" exactly (up to nothing: same weights).
-    A type with share 0 gets weight 0; a type with share > 0 but no rows raises ValueError.
+    y: 1 = wrong answer; pred_yes: 1 = answered "yes". Correct answers keep weight 1. Wrong answers are weighted so that
+    total positive weight equals total negative weight and hallucinated-yes errors hold `halluc_share` of it.
     """
     y, py = np.asarray(y).astype(int), np.asarray(pred_yes).astype(int)
     if not 0.0 <= halluc_share <= 1.0:
@@ -83,12 +63,12 @@ def error_type_weights(y, pred_yes, halluc_share: float) -> np.ndarray:
 
 
 def amber_train_halluc_share(meta: pd.DataFrame, subset: str) -> float:
-    """Share of hallucinated-yes among the errors of one AMBER subset, computed on the TRAIN split only (never dev/test labels)."""
+    """Share of hallucinated-yes among the errors of one AMBER subset (train split only)."""
     d = meta[(meta["setting"] == subset) & (meta["split"] == "train")]
     err = d[d["error"] == 1]
     if err.empty:
         raise ValueError(f"no errors in the AMBER-{subset} train split")
-    return float((err["pred_yes"] == 1).mean())              # an error with answer yes means the object is absent: hallucinated yes
+    return float((err["pred_yes"] == 1).mean())            
 
 
 def route_scores(pred_yes, s_yes, s_no) -> np.ndarray:
@@ -97,7 +77,7 @@ def route_scores(pred_yes, s_yes, s_no) -> np.ndarray:
 
 
 def answer_split_auc(y, score, pred_yes, groups, n_boot: int, seed: int = 0) -> list[dict]:
-    """E0: AUROC of one score on all rows and separately on the rows answered yes / answered no (with image-bootstrap CIs)."""
+    """E0: AUROC of one score on all rows and on the rows answered yes / no, with bootstrap CIs."""
     y, score, py, groups = np.asarray(y), np.asarray(score, dtype=float), np.asarray(pred_yes).astype(int), np.asarray(groups)
     out = []
     for name, sel in [("all rows", np.ones(len(y), bool)), ("answered yes", py == 1), ("answered no", py == 0)]:
@@ -105,12 +85,9 @@ def answer_split_auc(y, score, pred_yes, groups, n_boot: int, seed: int = 0) -> 
     return out
 
 
-# --------------------------------------------------------------------------------------------------------------------
-# evaluation helper: AUROC + paired differences against the best baseline and the original probe
-# --------------------------------------------------------------------------------------------------------------------
+# evaluation helper
 def eval_rows(model, experiment, variant, eval_set, y, score, groups, base, orig, n_boot, n_boot_paired, seed, extra=None):
-    """One output row: AUROC [CI], n, n_pos and the paired image-bootstrap differences. `base`=(name, scores) is the best
-    output-level baseline on these rows, `orig`=scores of the original POPE probe on the same rows (None = not applicable)."""
+    """One output row: AUROC with CI plus paired bootstrap differences vs the best baseline `base` and the original probe `orig`."""
     row = dict(model=model, experiment=experiment, variant=variant, eval_set=eval_set, **(extra or {}))
     row.update(pe.auc_ci(y, score, groups, n_boot, seed))
     for tag, ref in [("baseline", base[1] if base else None), ("orig", orig)]:
@@ -125,15 +102,13 @@ def eval_rows(model, experiment, variant, eval_set, y, score, groups, base, orig
 
 
 def best_baseline(meta_rows: pd.DataFrame, y) -> tuple[str, np.ndarray]:
-    """The output-level baseline (token prob / margin / entropies) with the highest AUROC on these rows (as in transfer_amber.csv)."""
+    """The output-level baseline with the highest AUROC on these rows."""
     sig = pe.unc_signals(meta_rows)
     name = max(sig, key=lambda k: (np.nan_to_num(pe.safe_auc(y, sig[k]), nan=-1.0)))
     return f"baseline: {name}", sig[name]
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # one model
-# --------------------------------------------------------------------------------------------------------------------
 def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, reference_dirs=()):
     out_dir.mkdir(parents=True, exist_ok=True)
     pope = pe.View(load_cache("pope", model_key, cache_dir))
@@ -155,24 +130,24 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
     log(f"[{model_key}] POPE rows {n_p} (train {len(tr)} / dev {len(dv)} / test {len(te)}, errors in test {int(y[te].sum())}); "
         f"AMBER rows {n_a}; layers {len(layers)}")
 
-    # ---- weights for E1 (train and dev rows weighted the same way, dev used for selection)
+    # E1 weights
     def weights_for(share):
         w = np.zeros(n_p)
         w[tr] = error_type_weights(y[tr], pyes[tr], share)
         w[dv] = error_type_weights(y[dv], pyes[dv], share)
         return w
     w_e1a = weights_for(0.5)
-    shares = {s: amber_train_halluc_share(am, s) for s in SUBSETS}     # AMBER TRAIN split only (E1b, target-domain statistics)
+    shares = {s: amber_train_halluc_share(am, s) for s in SUBSETS}
     w_e1b = {s: weights_for(shares[s]) for s in SUBSETS}
-    pope_share = float(((y[tr] == 1) & (pyes[tr] == 1)).sum() / max(int(y[tr].sum()), 1))      # natural hallucinated-yes share of POPE-train errors
+    pope_share = float(((y[tr] == 1) & (pyes[tr] == 1)).sum() / max(int(y[tr].sum()), 1))
     log(f"[{model_key}] hallucinated-yes share of errors: POPE train (natural) {pope_share:.3f}; E1a uses 0.500; E1b uses (AMBER train split, "
         "target-domain statistics) " + ", ".join(f"{s}={shares[s]:.3f}" for s in SUBSETS))
-    tr_y, dv_y = tr[pyes[tr] == 1], dv[pyes[dv] == 1]                 # E2 sub-populations (answered yes / answered no)
+    tr_y, dv_y = tr[pyes[tr] == 1], dv[pyes[dv] == 1]
     tr_n, dv_n = tr[pyes[tr] == 0], dv[pyes[dv] == 0]
     log(f"[{model_key}] E2 rows: answered-yes train {len(tr_y)} (errors {int(y[tr_y].sum())}) dev {len(dv_y)} (errors {int(y[dv_y].sum())}) | "
         f"answered-no train {len(tr_n)} (errors {int(y[tr_n].sum())}) dev {len(dv_n)} (errors {int(y[dv_n].sum())})")
 
-    # ---- layer sweep: every variant is fitted at every layer; selection is by (weighted) POPE dev AUROC only
+    # layer sweep (selection on POPE dev only)
     fits = {k: {} for k in ["orig", "e1a", "e1b_existence", "e1b_attribute", "e1b_relation", "e2_yes", "e2_no"]}
     layer_rows = []
     for hs in layers:
@@ -186,7 +161,7 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
         }
         for s in SUBSETS:
             cur[f"e1b_{s}"] = pe.select_fit(Xl, y, groups, tr, dv, "logreg", cfgs, seed, False, 0, w_e1b[s])
-        # Platt scaling for the two E2 probes, fitted on their own POPE dev rows (so their probabilities are comparable)
+        # Platt scaling for the E2 probes
         for k, dvk in (("e2_yes", dv_y), ("e2_no", dv_n)):
             if cur[k] is not None:
                 cur[k]["platt"] = platt_fit(pe.probe_scores(cur[k], Xl[dvk]), y[dvk])
@@ -194,7 +169,7 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
             if f is not None:
                 f["layer"] = hs
                 fits[k][hs] = f
-        # descriptive per-layer table (NOT used for selection): POPE test and AMBER test AUROC at this layer
+        # per-layer table (descriptive only)
         for name, f_list in [("orig", ["orig"]), ("e1a", ["e1a"]), ("e2", ["e2_yes", "e2_no"])] + [(f"e1b_{s}", [f"e1b_{s}"]) for s in SUBSETS]:
             if any(cur.get(k) is None for k in f_list):
                 continue
@@ -220,7 +195,7 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
         d = {h: f for h, f in fits[k].items() if not np.isnan(f["sel_auroc"])}
         if not d:
             raise RuntimeError(f"no usable layer for variant {k} (a class is missing in train or dev)")
-        hs = max(d, key=lambda h: d[h]["sel_auroc"])                    # weighted POPE-dev AUROC only
+        hs = max(d, key=lambda h: d[h]["sel_auroc"])
         return hs, d[hs]
     chosen = {k: best(k) for k in fits}
     for k in ("e2_yes", "e2_no"):
@@ -273,11 +248,11 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
             b_sub = best_baseline(meta_rows.iloc[idx][sel], sy)
             rows.append(eval_rows(model_key, "E2 sub-probe", f"E2 {kk[3:]}-probe on rows {lab}", name, sy, score(kk, which, idx)[sel], g[sel], b_sub,
                                   s_orig[sel], **common, extra=dict(layer=chosen[kk][0], C=chosen[kk][1]["param"], uses_target_domain_stats=False)))
-        # E0: sign diagnostic of the original probe, its flip, and the trivial "answered no" score
+        # E0
         for lab, sc_ in [("original POPE probe", s_orig), ("1 - original probe", 1 - s_orig), ("trivial: model answered no", (py == 0).astype(float))]:
             for r in answer_split_auc(ylab, sc_, py, g, n_boot, seed):
                 e0_rows.append(dict(model=model_key, eval_set=name, score=lab, **r))
-        # AMBER-trained ceiling (same layer and C as the original probe), only for the figure
+        # AMBER-trained ceiling (figure only)
         if sub:
             itr = a_tr[sub]
             if len(itr) >= 50 and len(np.unique(a_y[itr])) == 2:
@@ -285,8 +260,8 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
                 rows.append(eval_rows(model_key, "ceiling", "AMBER-trained probe (ceiling)", name, ylab, pe.probe_scores(f_in, Xq[hs0][idx]), g, base,
                                       s_orig, **dict(n_boot=n_boot, n_boot_paired=n_boot_paired, seed=seed),
                                       extra=dict(layer=hs0, C=f0["param"], uses_target_domain_stats=True)))
-            # reproduction check against the main run (same code path, deterministic)
-            for ref in reference_dirs:                     # first main-run folder that has this model (order matters: qwen_logreg before cross_model_*)
+            # reproduction check against the main run
+            for ref in reference_dirs:
                 f = Path(ref) / "transfer_amber.csv"
                 if not f.exists():
                     continue
@@ -303,7 +278,7 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
     else:
         log(f"[{model_key}] no reference transfer_amber.csv found; reproduction of the main run not checked")
 
-    # ---- write outputs
+    # outputs
     df.to_csv(out_dir / "followup_summary.csv", index=False)
     df[df.experiment.isin(["baseline", "orig", "E1a", "E1b"])].to_csv(out_dir / "e1_reweight.csv", index=False)
     df[df.experiment.isin(["baseline", "orig", "E2", "E2 sub-probe"])].to_csv(out_dir / "e2_answer_conditioned.csv", index=False)
@@ -320,9 +295,7 @@ def run_model(model_key, cache_dir, out_dir, seed, n_boot, n_boot_paired, log, r
     return df
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # figure
-# --------------------------------------------------------------------------------------------------------------------
 def plot_followup(df: pd.DataFrame, path: Path, model_key: str):
     """Grouped bars per AMBER subset (Task B, AMBER test split): best baseline, original probe, E1a, E1b, E2, AMBER-trained ceiling."""
     import matplotlib

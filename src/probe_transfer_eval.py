@@ -2,28 +2,24 @@
 """Cross-model and cross-dataset evaluation of hallucination probes (CPU only; reads cached hidden states).
 
 For every model with a POPE cache (and optionally an AMBER cache) this script
-  1. computes training-free output-level baselines (token prob, |margin|, binary / vocab entropy),
-  2. trains one probe per layer on POPE-train, picks layer AND regularisation on POPE-dev only, reports POPE-test,
-  3. applies the POPE-trained probes, unchanged, to AMBER (transfer) and compares with the baselines on the same rows and
-     with a probe trained in-domain on AMBER-train (the "ceiling"),
-  4. plots layer-wise AUROC against relative depth (so models with different depths can share one axis).
+  1. computes output-level baselines (token prob, |margin|, binary / vocab entropy),
+  2. trains one probe per layer on POPE-train, selects layer and regularisation on POPE-dev, reports POPE-test,
+  3. applies the POPE-trained probes to AMBER (transfer) and compares with an in-domain AMBER probe,
+  4. plots layer-wise AUROC against relative depth.
 
-Two tasks, defined exactly as in notebook 02:
-  A  hallucinated-yes vs correct-yes, among questions the model answered "yes"   (label = `hallucination`)
-  B  wrong vs right answer, over all questions                                    (label = `error`)
-Uncertainty scores: higher = more likely bad. AUROC CIs are percentile bootstraps that resample IMAGES (questions on one
-image are not independent).
+Tasks:
+  A  hallucinated-yes vs correct-yes, among questions answered "yes"   (label = `hallucination`)
+  B  wrong vs right answer, over all questions                          (label = `error`)
+AUROC CIs are percentile bootstraps that resample images.
 
     python src/probe_transfer_eval.py --models qwen2vl-2b smolvlm-500m qwen25vl-3b --out-dir results/final/run
 
-Probe options (all selection happens on train/dev only; the test split is used once, for the reported numbers):
+Probe options (selection uses train/dev only):
   --class-weight / --no-class-weight  balanced class weights for the logistic-regression probe (default on)
   --pca 64 128 256                    fit PCA on train only and pick the size on dev (default: no PCA)
   --seeds 0 1 2                       MLP probe: repeat the whole selection per seed and report mean +- std of test AUROC
   --layer-cv K                        select layer/regularisation by image-grouped K-fold CV over train+dev (default: dev split)
   --recalibrate                       also report Platt-scaled probe probabilities (fit on dev / out-of-fold scores)
-Extra tables written next to the layer-wise ones: paired_tests.csv (probe vs baselines, paired image bootstrap), calibration.csv,
-pope_by_setting.csv, aurc.csv, plus the logit-only and hidden+logits ("combined") probes in every table.
 """
 from __future__ import annotations
 
@@ -72,9 +68,7 @@ class Options:
     n_boot_paired: int = 1000        # bootstrap draws for the paired tests
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # metrics
-# --------------------------------------------------------------------------------------------------------------------
 def unc_signals(m: pd.DataFrame) -> dict:
     """Training-free uncertainty scores, higher = more likely a bad answer (same definitions as notebook 02)."""
     return {"token prob (raw)": (1 - m["raw_conf"]).to_numpy(), "margin (|log-odds|)": (-m["margin"].abs()).to_numpy(),
@@ -116,9 +110,7 @@ def acc_coverage(err_score, correct):
     return k / len(c), np.cumsum(c) / k
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # data views (no copy of the big feature array)
-# --------------------------------------------------------------------------------------------------------------------
 class View:
     """A (possibly row-restricted) window onto a cache. X(idx, layer) copies only [len(idx), H]."""
 
@@ -143,9 +135,7 @@ def split_idx(meta, mask, split):
     return np.flatnonzero(mask & (meta["split"].to_numpy() == split))
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # probes
-# --------------------------------------------------------------------------------------------------------------------
 def make_probe(kind: str, param: float, seed: int = 0, class_weight: bool = True):
     if kind == "logreg":
         # class_weight="balanced" reweights the rare positive class (hallucinations / errors); the MLP has no such option
@@ -252,9 +242,7 @@ def fit_best_on_dev(Xtr, ytr, Xdev, ydev, kind, grid, seed=0):
     return select_fit(X, y, np.arange(len(y)), tr, dv, kind, make_configs(grid), seed)
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # per-model evaluation
-# --------------------------------------------------------------------------------------------------------------------
 def evaluate_model(model_key, pope: View, amber: View | None, tasks, kind, grid, stride, n_boot, seed=0, log=print,
                    opts: Options | None = None, probe_seed: int | None = None, store: dict | None = None,
                    include_baselines: bool = True):
@@ -416,9 +404,7 @@ def evaluate_model(model_key, pope: View, amber: View | None, tasks, kind, grid,
     return frames[0], frames[1], frames[2], curves
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # figures
-# --------------------------------------------------------------------------------------------------------------------
 def plot_layerwise(layer_df, pope_df, task, out_dir):
     """POPE test AUROC per layer (mean over seeds). Shaded band = std of the per-fold CV AUROC when --layer-cv is used
     (the curve the layer is chosen from), otherwise the std of test AUROC across MLP seeds when there are several."""
@@ -553,9 +539,7 @@ def plot_reliability(reliab, out_dir):
         plt.close(fig)
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # analysis of the stored test-set scores
-# --------------------------------------------------------------------------------------------------------------------
 POPE_SETTINGS = ["random", "popular", "adversarial"]
 
 
@@ -611,9 +595,7 @@ def analyse(store, primary_seed, n_boot, n_boot_paired, log=print):
     return cols(paired), cols(calib), cols(by_set), cols(aurc), reliab
 
 
-# --------------------------------------------------------------------------------------------------------------------
 # driver
-# --------------------------------------------------------------------------------------------------------------------
 def seed_summary(pope_df: pd.DataFrame) -> pd.DataFrame:
     """Mean +- std of POPE test AUROC across probe seeds, with the per-seed values (only probe rows)."""
     d = pope_df[pope_df.method.str.startswith("probe")]

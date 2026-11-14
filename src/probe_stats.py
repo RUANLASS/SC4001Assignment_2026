@@ -1,9 +1,4 @@
-"""Pure statistics helpers for the probe evaluation (no model, no I/O): paired image-level bootstrap, calibration
-metrics, Platt scaling and accuracy-coverage areas.
-
-Everything here takes plain numpy arrays so it can be unit-tested on tiny synthetic inputs (see tests/test_probe_stats.py).
-`probe_transfer_eval.py` imports these and applies them to the real caches.
-"""
+"""Statistics helpers for probe evaluation: paired bootstrap, calibration metrics, Platt scaling, accuracy-coverage areas."""
 from __future__ import annotations
 
 import numpy as np
@@ -25,19 +20,14 @@ def _split_by_group(groups) -> tuple[list, int]:
     return by_group, len(uniq)
 
 
-# --------------------------------------------------------------------------------------------------------------------
+
 # paired comparison of two scores on the SAME rows
-# --------------------------------------------------------------------------------------------------------------------
+
 def paired_auc_diff(y, s_probe, s_baseline, groups, n_boot: int = 1000, seed: int = 0) -> dict:
     """Paired image-level bootstrap of AUROC(s_probe) - AUROC(s_baseline).
 
-    Each bootstrap draw resamples whole images (groups) with replacement and evaluates BOTH scores on exactly the same
-    resampled rows, so the shared sampling noise cancels in the difference. Returns the observed difference, the 95%
-    percentile CI and a two-sided bootstrap p-value for H0: difference == 0.
-
-    p-value: 2 * min(P*(d <= 0), P*(d >= 0)) with +1 smoothing, i.e. (1 + #draws on that side) / (B + 1), capped at 1.
-    It can therefore not be exactly 0; the smallest value is about 2 / (B + 1). Draws where either AUROC is undefined
-    (a resample with a single class) are dropped. Positive `diff` means the first score (the probe) is better.
+    Returns the observed difference, 95% percentile CI and a two-sided bootstrap p-value (+1 smoothing).
+    Resamples with an undefined AUROC are dropped.
     """
     y = np.asarray(y)
     s_probe, s_baseline = np.asarray(s_probe, dtype=float), np.asarray(s_baseline, dtype=float)
@@ -62,9 +52,9 @@ def paired_auc_diff(y, s_probe, s_baseline, groups, n_boot: int = 1000, seed: in
     return out
 
 
-# --------------------------------------------------------------------------------------------------------------------
+
 # calibration
-# --------------------------------------------------------------------------------------------------------------------
+
 def reliability_bins(p, y, n_bins: int = 15) -> pd.DataFrame:
     """Equal-width bins on [0, 1] of the predicted probability of the positive class."""
     p, y = np.asarray(p, dtype=float), np.asarray(y, dtype=float)
@@ -105,15 +95,13 @@ def platt_apply(platt, scores) -> np.ndarray:
     return platt.predict_proba(_logit(scores).reshape(-1, 1))[:, 1]
 
 
-# --------------------------------------------------------------------------------------------------------------------
-# accuracy-coverage / risk-coverage
-# --------------------------------------------------------------------------------------------------------------------
-def aurc_metrics(err_score, correct) -> dict:
-    """Areas for the selective-prediction curve. `err_score`: higher = less trustworthy; `correct`: 1/0 per answer.
 
-    Answers are kept most-trusted first; at coverage k/n the risk is 1 - (accuracy of the kept k). AURC = mean over k of
-    that risk (lower is better) and AUACC = 1 - AURC (area under the accuracy-coverage curve). Reference values:
-    `random_aurc` = overall error rate (random abstention) and `oracle_aurc` (all errors abstained on first).
+# accuracy-coverage / risk-coverage
+
+def aurc_metrics(err_score, correct) -> dict:
+    """AURC / AUACC for selective prediction. `err_score`: higher = less trustworthy; `correct`: 1/0 per answer.
+
+    `random_aurc` and `oracle_aurc` are the random-abstention and perfect-abstention references.
     """
     err_score, correct = np.asarray(err_score, dtype=float), np.asarray(correct, dtype=float)
     n = len(correct)

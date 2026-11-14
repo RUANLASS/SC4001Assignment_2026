@@ -1,12 +1,4 @@
-"""Cache file naming and loading shared by the extraction script and the evaluation script.
-
-New caches are written as   results/cached_features/{dataset}_{model}_features.pt  (+ _metadata.parquet, _run_config.json).
-The team's existing Qwen2-VL-2B POPE cache (pope_full_features.pt / pope_metadata.parquet) is found automatically as
-("pope", "qwen2vl-2b"). The .pt layout is the same as notebook 01: {"features": [N, L, H] float16, "row_idx": [N]},
-plus optional "layers" (which hidden_states entries were kept) and "n_hidden_state_entries".
-
-torch is imported lazily: the pure-pandas helpers work without it.
-"""
+"""Cache file naming and loading shared by the extraction and evaluation scripts."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -55,7 +47,7 @@ def load_cache(dataset: str, model_key: str, cache_dir, mmap: bool = True) -> di
     missing = set(row_idx.tolist()) - set(meta["row_idx"].tolist())
     if missing:
         raise ValueError(f"{len(missing)} cached feature rows have no metadata, e.g. {sorted(missing)[:5]}")
-    meta = meta.set_index("row_idx", drop=False).loc[row_idx].reset_index(drop=True)   # meta row i <-> features[i]
+    meta = meta.set_index("row_idx", drop=False).loc[row_idx].reset_index(drop=True)
     layers = [int(x) for x in blob.get("layers", range(feats.shape[1]))]
     n_entries = int(blob.get("n_hidden_state_entries", feats.shape[1]))
     return dict(features=feats, meta=derive_columns(meta), layers=layers, n_entries=n_entries,
@@ -63,7 +55,7 @@ def load_cache(dataset: str, model_key: str, cache_dir, mmap: bool = True) -> di
 
 
 def derive_columns(meta: pd.DataFrame) -> pd.DataFrame:
-    """Same derived columns and definitions as notebook 02 (so numbers are comparable)."""
+    """Add split, gt_yes, pred_yes, correct, error, conf and raw_conf columns."""
     m = meta.copy()
     if "split" not in m.columns or m["split"].isna().any():
         from vlm_datasets import split_of
